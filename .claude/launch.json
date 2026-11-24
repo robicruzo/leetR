@@ -38,6 +38,16 @@
         "build"
       ],
       "port": 4174
+    },
+    {
+      "name": "pages",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "serve:pages"
+      ],
+      "port": 4175,
+      "url": "http://localhost:4175"
     }
   ]
 }

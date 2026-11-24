@@ -53,7 +53,16 @@ The generated folders (`static/webr`, `static/webr-repo` and `src/lib/generated`
 
 **Infinite loops.** Run has a 15 s limit and Submit 30 s. On timeout the engine interrupts R. If R doesn't yield within 1.5 s, it kills the worker and boots a fresh session, which takes about 4–5 s with the cache warm.
 
-**Deploying under a sub-path** (e.g. GitHub Pages): `BASE_PATH=/repo-name npm run build`.
+**Deploying.** Every push to `main` deploys to GitHub Pages ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)): the workflow mirrors the packages, runs the content check in webR, and builds under `/<repo-name>/`, so a failing content check blocks the deploy. Live at https://robicruzo.github.io/leetR/.
+
+To test a Pages build locally, with the sub-path and without COOP/COEP headers (so the service worker has to add them):
+
+```bash
+BASE_PATH=/leetR npm run build
+npm run serve:pages   # http://localhost:4175/leetR/
+```
+
+The first visit loads once, then reloads itself when the service worker takes over. From then on the page is cross-origin isolated.
 
 ## Track challenges and grading
 

@@ -419,7 +419,13 @@ It runs under webR (`.build_args` set by check.mjs) or native R
 7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
    new track is a `content/<NN-name>/` folder; the routes and the content
    check pick it up automatically.
-8. Smaller follow-ups:
+8. ~~**Deploy to GitHub Pages.**~~ **Done 2026-11-24**: every push to main
+   builds and deploys (`.github/workflows/deploy.yml`) to
+   https://robicruzo.github.io/leetR/. Tested locally first with
+   `npm run serve:pages` (Pages-like server: sub-path, no COOP/COEP): the
+   first visit reloads once, then the page is isolated via the service worker;
+   grading and offline both work under /leetR/.
+9. Smaller follow-ups:
    - a review queue across all tracks;
    - the timeline-ruler visual for lubridate;
    - lazy-loading ggplot2 at runtime (it is mounted at boot, though only `mpg` uses it so far).
