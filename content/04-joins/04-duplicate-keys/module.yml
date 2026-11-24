@@ -1,0 +1,73 @@
+id: 04-duplicate-keys
+title: "Duplicate keys, many-to-many, and key names"
+key_idea: >-
+  A join pairs each x row with every y row that matches. If y's key is
+  unique, rows can only gain columns. If a key repeats in y, the x row is
+  copied once per match, so the result grows. If it repeats on both sides
+  (many-to-many), dplyr warns, because that is usually a mistake.
+  relationship = states what you expect, and join_by(a == b) matches keys
+  with different names.
+subskills:
+  - {id: dk-multiply, name: "A repeated key in y copies the x row"}
+  - {id: dk-relationship, name: "relationship = and the many-to-many warning"}
+  - {id: dk-keyname, name: "join_by(a == b) for keys with different names"}
+readings:
+  - {label: "r4ds 19.5.1, Row matching", url: "https://r4ds.hadley.nz/joins.html#row-matching"}
+  - {label: "dplyr: join_by()", url: "https://dplyr.tidyverse.org/reference/join_by.html"}
+  - {label: "STAT 7500 primer ch. 7 (joins)", url: ""}
+
+predict:
+  skill: dk-multiply
+  code: |
+    band_members |>
+      left_join(instruments, join_by(name))
+  ask: "instruments is band_instruments with a second row for John (piano). band_members has Mick, John and Paul. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "4 × 3", correct: true}
+    - choice: "3 × 3"
+      misconception: one-match-only
+      probe: "John matches two rows of instruments. Where would his piano go if he kept one row?"
+    - choice: "3 × 4"
+      misconception: matches-become-columns
+      probe: "Does a join ever turn a second match into a new column, like plays_2?"
+    - choice: "An error: name is not unique"
+      misconception: dup-errors
+      probe: "Is a repeated key in y alone enough to stop a join? What does dplyr warn about instead?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-many-to-many
+    skill: dk-relationship
+    ask: "x and y both have the key value 1 twice. What does left_join(x, y, join_by(k)) do?"
+    options:
+      - {choice: "Returns all 4 pairs and warns about a many-to-many relationship", correct: true}
+      - choice: "Stops with an error"
+        misconception: m2m-errors
+        probe: "dplyr can build all the pairs. Should that be an error or a warning you can silence?"
+      - choice: "Matches each x row to its first match only"
+        misconception: first-match
+        probe: "Which argument would ask for only the first match? Is it on by default?"
+    right_followup: "Are you sure? How do you tell dplyr the many-to-many is intended, so it stops warning?"
+    explain: >-
+      Every x row is paired with every matching y row: 2 × 2 = 4 rows. When
+      keys repeat on both sides this is rarely intended, so dplyr warns.
+      relationship = "many-to-many" says it is deliberate; "one-to-one" or
+      "many-to-one" turn a surprise into an error.
+    verify: 'inherits(tryCatch(dplyr::left_join(tibble::tibble(k = c(1, 1)), tibble::tibble(k = c(1, 1)), dplyr::join_by(k)), warning = function(w) w), "warning")'
+  - id: p-key-names
+    skill: dk-keyname
+    ask: "band_members has name; band_instruments2 has the same people in a column called artist. Which call joins them?"
+    options:
+      - {choice: "left_join(band_instruments2, join_by(name == artist))", correct: true}
+      - choice: "left_join(band_instruments2, join_by(name, artist))"
+        misconception: two-keys
+        probe: "That asks for two keys, each in both tables. Does band_members have an artist column?"
+      - choice: "left_join(band_instruments2, join_by(artist == name))"
+        misconception: sides-swapped
+        probe: "In join_by(a == b), which table does a belong to?"
+    right_followup: "Are you sure? Which of the two names does the result keep?"
+    explain: >-
+      join_by(name == artist) reads "x$name equals y$artist": the left side
+      of == is always x's column. The result keeps x's name (name) for the key.
+    verify: 'nrow(band_members |> dplyr::left_join(band_instruments2, dplyr::join_by(name == artist))) == 3'

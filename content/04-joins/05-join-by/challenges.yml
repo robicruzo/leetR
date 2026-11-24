@@ -1,0 +1,116 @@
+- id: jb-mass-bands
+  tier: warm-up
+  type: write
+  skill: jb-between
+  uses: [mass_bands]
+  prompt: "Give every penguin its mass band from mass_bands (columns band, from and to), keeping all penguins."
+  hint: "join_by(between(body_mass_g, from, to)) matches a mass to the band whose range contains it."
+  solution: |
+    penguins |>
+      left_join(mass_bands, join_by(between(body_mass_g, from, to)))
+
+- id: jb-inequality-rows
+  tier: warm-up
+  type: predict
+  skill: jb-inequality
+  uses: [mass_bands]
+  prompt: "penguins has 344 rows, 2 of them with no body mass. How many rows does this return?"
+  code: |
+    penguins |>
+      inner_join(mass_bands, join_by(body_mass_g >= from))
+  options: ["731", "342", "344", "1032"]
+  verify: 'nrow(result)'
+  explain: "Each penguin matches every band whose start it passes: light penguins once, medium ones twice, heavy ones three times. That adds up to 731 rows; the 2 NA penguins match nothing and are dropped by the inner join."
+
+- id: jb-closest-band
+  tier: core
+  type: write
+  skill: jb-closest
+  uses: [mass_bands]
+  prompt: "Give every penguin a band using only the from column: the band with the largest from that is not above its body mass."
+  hint: "closest() wraps an inequality and keeps only the nearest match."
+  solution: |
+    penguins |>
+      left_join(mass_bands, join_by(closest(body_mass_g >= from)))
+
+- id: jb-fix-between
+  tier: core
+  type: fix
+  skill: jb-between
+  uses: [mass_bands]
+  prompt: "This should put each penguin in the one band whose range contains its mass, but heavy penguins get several bands. Fix the condition."
+  hint: "Inside a range, the mass is at least from and at most to."
+  starter: |
+    penguins |>
+      left_join(mass_bands, join_by(body_mass_g >= from, body_mass_g >= to))
+  solution: |
+    penguins |>
+      left_join(mass_bands, join_by(body_mass_g >= from, body_mass_g <= to))
+
+- id: jb-airports-west
+  tier: core
+  type: write
+  skill: jb-inequality
+  data: airports
+  prompt: >-
+    For each NYC airport (EWR, JFK, LGA), count the airports in airports that
+    lie further west (a smaller longitude, lon). Return faa and n.
+  hint: "Join the three NYC rows to all airports with join_by(lon > dest_lon), after renaming the other side's columns."
+  solution: |
+    airports |>
+      filter(faa %in% c("EWR", "JFK", "LGA")) |>
+      select(faa, lon) |>
+      inner_join(airports |> select(dest = faa, dest_lon = lon), join_by(lon > dest_lon)) |>
+      count(faa)
+
+- id: jb-distance-fees
+  tier: stretch
+  type: write
+  skill: jb-closest
+  data: flights
+  uses: [fees]
+  prompt: >-
+    fees is a made-up price list: a flight pays the fee of the row with the
+    largest from_distance that is not above its distance. Add fee to every
+    flight.
+  hint: "A rolling join: closest(distance >= from_distance)."
+  solution: |
+    flights |>
+      left_join(fees, join_by(closest(distance >= from_distance)))
+
+- id: jb-na-bands
+  tier: stretch
+  type: predict
+  skill: jb-between
+  uses: [mass_bands]
+  prompt: "How many penguins get NA in band?"
+  code: |
+    penguins |>
+      left_join(mass_bands, join_by(between(body_mass_g, from, to)))
+  options: ["2", "0", "11", "344"]
+  verify: 'sum(is.na(result$band))'
+  explain: "Every known mass (2,700–6,300 g) lies in a band, so only the 2 penguins with no body mass match nothing. (11 is the number with unknown sex, which plays no part here.)"
+
+- id: jb-heavier-count
+  tier: brain-melter
+  type: write
+  skill: jb-inequality
+  prompt: >-
+    For each penguin with a known body mass, count the penguins of the same
+    species that are strictly heavier. Return species, body_mass_g and
+    heavier (0 for the heaviest).
+  hint: >-
+    Join the table to itself with join_by(species, body_mass_g <
+    body_mass_g): the left side is x, the right side y. Give each penguin an
+    id first so you can count per penguin, and keep penguins with no
+    heavier match.
+  solution: |
+    p <- penguins |>
+      filter(!is.na(body_mass_g)) |>
+      mutate(id = row_number()) |>
+      select(id, species, body_mass_g)
+    p |>
+      left_join(p, join_by(species, body_mass_g < body_mass_g), suffix = c("", "_other")) |>
+      summarise(heavier = sum(!is.na(id_other)), .by = c(id, species, body_mass_g)) |>
+      select(species, body_mass_g, heavier)
+  compare: {ignore_row_order: true}

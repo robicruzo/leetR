@@ -1,0 +1,73 @@
+id: 03-filtering-joins
+title: "Filtering joins: keep or drop rows by a match"
+key_idea: >-
+  A filtering join uses y only to decide which rows of x to keep.
+  semi_join() keeps the x rows that have a match in y; anti_join() keeps
+  those that don't. They never add columns and never duplicate rows, so the
+  result is always a subset of x. anti_join() is the standard way to find
+  keys that don't match: data problems waiting to bite.
+subskills:
+  - {id: fj-semi, name: "semi_join keeps x rows that have a match"}
+  - {id: fj-anti, name: "anti_join keeps x rows without a match"}
+  - {id: fj-shape, name: "No new columns, no duplicated rows"}
+  - {id: fj-find, name: "anti_join finds keys that don't match"}
+readings:
+  - {label: "r4ds 19.3.4, Filtering joins", url: "https://r4ds.hadley.nz/joins.html#filtering-joins"}
+  - {label: "MDSR 5.1, Joins", url: "https://mdsr-book.github.io/mdsr3e/05-dataII.html"}
+  - {label: "STAT 7500 primer ch. 7 (joins)", url: ""}
+
+predict:
+  skill: fj-shape
+  code: |
+    band_members |>
+      semi_join(band_instruments, join_by(name))
+  ask: "band_members (Mick, John, Paul) and band_instruments (John, Paul, Keith) share name. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "2 × 2", correct: true}
+    - choice: "2 × 3"
+      misconception: semi-adds-columns
+      probe: "A filtering join only decides which rows of x to keep. Does it bring plays along?"
+    - choice: "3 × 2"
+      misconception: semi-keeps-all
+      probe: "Mick has no row in band_instruments. Does a semi join keep him?"
+    - choice: "1 × 2"
+      misconception: semi-is-anti
+      probe: "Which rows does semi_join() keep: the matches or the misses?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-semi-dup
+    skill: fj-shape
+    ask: "instruments has two rows for John (guitar and piano). How many rows does band_members |> semi_join(instruments, join_by(name)) return?"
+    options:
+      - {choice: "2", correct: true}
+      - choice: "3"
+        misconception: semi-duplicates
+        probe: "A semi join asks one question per x row: is there a match? Does a second match change the answer?"
+      - choice: "4"
+        misconception: semi-is-left
+        probe: "Would a filtering join ever return more rows than x has?"
+    right_followup: "Are you sure? And how many rows would left_join() return with the same tables?"
+    explain: >-
+      semi_join() keeps each x row once if it has at least one match, however
+      many matches there are: John and Paul, 2 rows. A left join would copy
+      John's row for each of his instruments, giving 4 rows.
+    verify: 'nrow(band_members |> dplyr::semi_join(instruments, dplyr::join_by(name)))'
+  - id: p-anti-which
+    skill: fj-anti
+    ask: "Which rows does band_instruments |> anti_join(band_members, join_by(name)) return?"
+    options:
+      - {choice: "Keith's", correct: true}
+      - choice: "Mick's"
+        misconception: anti-is-symmetric
+        probe: "Whose rows can a filtering join return: x's or y's? Which table is x here?"
+      - choice: "John's and Paul's"
+        misconception: anti-is-semi
+        probe: "anti means \"without a match\". Do John and Paul have a match in band_members?"
+    right_followup: "Are you sure? What does the same anti join return with the two tables swapped?"
+    explain: >-
+      anti_join() returns rows of x with no match in y. Here x is
+      band_instruments, and only Keith has no row in band_members. Swap the
+      tables and the answer is Mick: the direction matters.
+    verify: 'identical((band_instruments |> dplyr::anti_join(band_members, dplyr::join_by(name)))$name, "Keith")'

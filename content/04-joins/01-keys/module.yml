@@ -1,0 +1,76 @@
+id: 01-keys
+title: "Keys: the columns that connect tables"
+key_idea: >-
+  Every join matches rows by a key. A primary key identifies each row of its
+  own table: no value appears twice. A foreign key is a column that points
+  at another table's primary key, like flights$tailnum pointing at
+  planes$tailnum. Check a key before you trust it: count() it and look for
+  n > 1.
+subskills:
+  - {id: k-primary, name: "A primary key identifies each row"}
+  - {id: k-check, name: "Check a key: count(), then filter(n > 1)"}
+  - {id: k-compound, name: "A key can take several columns"}
+  - {id: k-foreign, name: "A foreign key points at another table's key"}
+readings:
+  - {label: "r4ds 19.2, Keys", url: "https://r4ds.hadley.nz/joins.html#keys"}
+  - {label: "MDSR 5.1, Inner join", url: "https://mdsr-book.github.io/mdsr3e/05-dataII.html"}
+  - {label: "STAT 7500 primer ch. 7 (joins)", url: ""}
+
+predict:
+  skill: k-check
+  code: |
+    instruments |>
+      count(name) |>
+      filter(n > 1)
+  ask: "instruments lists who plays what (4 rows). Is name a key? What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "1 × 2", correct: true}
+    - choice: "0 × 2"
+      misconception: looks-unique
+      probe: "Read the name column again, top to bottom. Does any name appear twice?"
+    - choice: "4 × 2"
+      misconception: count-keeps-rows
+      probe: "count(name) makes one row per name. How many different names are there, before the filter?"
+    - choice: "1 × 1"
+      misconception: count-drops-key
+      probe: "Which column does count() keep next to n?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-planes-key
+    skill: k-primary
+    ask: "planes has one row per aircraft, with columns tailnum, year, type, manufacturer, model, engines, seats, speed and engine. Which column is its primary key?"
+    options:
+      - {choice: "tailnum", correct: true}
+      - choice: "model"
+        misconception: describing-not-identifying
+        probe: "Can two different planes be the same model? What would a join then do with a model that has 200 planes?"
+      - choice: "year"
+        misconception: any-column-is-key
+        probe: "How many planes were built in, say, 2004? Could year tell them apart?"
+    right_followup: "Are you sure? How would you check it in one line, rather than trust the column name?"
+    explain: >-
+      A primary key has one row per value. tailnum is the aircraft's
+      registration, unique to each plane; model and year describe planes
+      but many planes share them. planes |> count(tailnum) |> filter(n > 1)
+      returns 0 rows, which is the proof.
+    verify: 'nrow(planes |> dplyr::count(tailnum) |> dplyr::filter(n > 1)) == 0'
+  - id: p-foreign
+    skill: k-foreign
+    ask: "flights$tailnum is a foreign key. What does that mean?"
+    options:
+      - {choice: "Each flight's tailnum should match one row of planes", correct: true}
+      - choice: "Each tailnum appears only once in flights"
+        misconception: foreign-is-unique
+        probe: "How many flights can one plane fly in a year? Would each flight need its own plane?"
+      - choice: "flights can be joined only on tailnum"
+        misconception: one-key-per-table
+        probe: "flights also has carrier, origin and dest. Which tables could those point to?"
+    right_followup: "Are you sure? Then what about the 52,606 flights whose tailnum is not in planes?"
+    explain: >-
+      A foreign key repeats freely in its own table (one plane, many flights)
+      but should match exactly one row of the table it points to. flights
+      has several: carrier points to airlines, origin and dest to airports,
+      tailnum to planes. Real data breaks the rule: some tailnums have no
+      row in planes.

@@ -57,6 +57,8 @@ for (ch in gradable) {
 
   if (!isFALSE(ch$robust)) {
     value <- tryCatch(suppressMessages(.leetr$eval_snippet(ch$solution)), error = function(e) NULL)
+    # Nobody types in thousands of rows by hand, and deparsing them is slow.
+    if (is.data.frame(value) && nrow(value) > 2000) value <- NULL
     if (!is.null(value)) {
       literal <- paste(deparse(value, control = c("keepNA", "keepInteger", "niceNames", "showAttributes")), collapse = "\n")
       r <- grade(literal, ch); checks <- checks + 1L

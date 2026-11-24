@@ -1,0 +1,32 @@
+data: penguins_sample |> select(species, body_mass_g)
+with: mass_bands
+steps:
+  - code: ""
+    show: "penguins_sample                       mass_bands"
+    pair: true
+    tint: species
+    tint_y: none
+    caption: "Eight penguins, and three mass bands with a lower (from) and upper (to) limit in grams. No column is equal across the tables: the match is a range."
+  - code: "left_join(mass_bands, join_by(between(body_mass_g, from, to)))"
+    join: true
+    tint: species
+    caption: "between() puts each penguin in the band whose range contains its mass. The band's tiles fly to every penguin in it, so they are copied. The NA penguin matches nothing."
+    skill: jb-between
+  - from_data: true
+    code: ""
+    show: "penguins_sample                       mass_bands"
+    pair: true
+    tint: species
+    tint_y: none
+    caption: "Back to the tables. Now ask only: body_mass_g >= from."
+  - code: "inner_join(mass_bands, join_by(body_mass_g >= from))"
+    join: true
+    tint: species
+    caption: "An inequality matches every band a penguin passes: the 5,700 g Gentoo is >= all three starts, so its row appears three times. 7 penguins became 14 rows."
+    skill: jb-inequality
+  - from_data: true
+    code: "left_join(mass_bands, join_by(closest(body_mass_g >= from)))"
+    join: true
+    tint: species
+    caption: "closest() keeps only the nearest band that passes: one row per penguin again. With these bands it gives the same answer as between()."
+    skill: jb-closest

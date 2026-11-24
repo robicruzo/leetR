@@ -282,9 +282,12 @@ class REngine {
 				try {
 					const { result } = await shelter.captureR(
 						'.leetr$grade(.leetr_user, .leetr_solution, .leetr_tests, .leetr_opts)',
-						{ captureStreams: true, captureGraphics: false }
+						// captureConditions: false, so an error inside the grader itself
+						// throws and is reported, instead of yielding an empty result.
+						{ captureStreams: true, captureConditions: false, captureGraphics: false }
 					);
-					const r = toPlain(await result.toJs()) as Record<string, unknown>;
+					const r = toPlain(await result.toJs()) as Record<string, unknown> | null;
+					if (!r) throw new Error('The grader returned nothing. Try Restart R, then Submit again.');
 					return {
 						passed: Boolean(r.passed),
 						structure: (r.structure as string[]) ?? [],
@@ -329,9 +332,10 @@ class REngine {
 				try {
 					const { result } = await shelter.captureR('.leetr$grade_snippet(.leetr_user, .leetr_solution, .leetr_opts)', {
 						captureStreams: true,
+						captureConditions: false,
 						captureGraphics: false
 					});
-					return this.#toGrade(toPlain(await result.toJs()) as Record<string, unknown>, t0);
+					return this.#toGrade(toPlain(await result.toJs()) as Record<string, unknown> | null, t0);
 				} finally {
 					await shelter.purge();
 					await webR.destroy(optsList);
@@ -342,7 +346,8 @@ class REngine {
 		}
 	}
 
-	#toGrade(r: Record<string, unknown>, t0: number): GradeResult {
+	#toGrade(r: Record<string, unknown> | null, t0: number): GradeResult {
+		if (!r) throw new Error('The grader returned nothing. Try Restart R, then Submit again.');
 		return {
 			passed: Boolean(r.passed),
 			structure: (r.structure as string[]) ?? [],

@@ -1,0 +1,102 @@
+- id: fj-known-planes
+  tier: warm-up
+  type: write
+  skill: fj-semi
+  data: flights
+  uses: [planes]
+  prompt: "Keep only the flights whose plane is in planes, with flights' columns only."
+  hint: "A filtering join keeps rows of x and adds nothing."
+  solution: |
+    flights |>
+      semi_join(planes, join_by(tailnum))
+
+- id: fj-airports-unvisited
+  tier: warm-up
+  type: write
+  skill: fj-anti
+  data: airports
+  uses: [flights]
+  prompt: "Which airports in airports had no flights from New York in 2013? Return those rows of airports."
+  hint: "x is airports this time. Its key is faa; in flights the matching column is dest."
+  solution: |
+    airports |>
+      anti_join(flights, join_by(faa == dest))
+
+- id: fj-missing-planes
+  tier: core
+  type: write
+  skill: fj-find
+  data: flights
+  uses: [planes]
+  prompt: "Which tailnums in flights have no row in planes? Count their flights, most first."
+  hint: "Find the flights without a match, then count by tailnum."
+  solution: |
+    flights |>
+      anti_join(planes, join_by(tailnum)) |>
+      count(tailnum, sort = TRUE)
+
+- id: fj-semi-ncol
+  tier: core
+  type: predict
+  skill: fj-shape
+  data: flights
+  uses: [planes]
+  prompt: "flights has 19 columns and planes has 9 (including tailnum). How many columns does this return?"
+  code: |
+    flights |>
+      semi_join(planes, join_by(tailnum))
+  options: ["19", "27", "28", "9"]
+  verify: 'ncol(result)'
+  explain: "A filtering join never adds columns: the result has flights' 19 columns, only fewer rows. left_join() would give 27 (19 + 9 − the shared tailnum)."
+
+- id: fj-fix-semi
+  tier: core
+  type: fix
+  skill: fj-semi
+  data: flights
+  uses: [planes]
+  prompt: "This should keep the flights whose plane is known, with only flights' columns, but it brings in all of planes' columns too. Fix it."
+  hint: "Which join keeps matching rows without adding anything?"
+  starter: |
+    flights |>
+      inner_join(planes, join_by(tailnum))
+  solution: |
+    flights |>
+      semi_join(planes, join_by(tailnum))
+
+- id: fj-unknown-dests
+  tier: stretch
+  type: write
+  skill: fj-find
+  data: flights
+  uses: [airports]
+  prompt: "Which destinations in flights are missing from airports? Return dest and the number of flights, most first."
+  hint: "anti_join() on dest == faa, then count."
+  solution: |
+    flights |>
+      anti_join(airports, join_by(dest == faa)) |>
+      count(dest, sort = TRUE)
+
+- id: fj-no-atlanta
+  tier: stretch
+  type: constrained
+  skill: fj-anti
+  data: airlines
+  uses: [flights]
+  prompt: "Which airlines had no flights to Atlanta (ATL)? Return those rows of airlines, without using %in%."
+  hint: "Narrow flights to Atlanta first, then keep the airlines with no match among them."
+  solution: |
+    airlines |>
+      anti_join(flights |> filter(dest == "ATL"), join_by(carrier))
+  forbid: ["%in%"]
+
+- id: fj-top-destinations
+  tier: brain-melter
+  type: write
+  skill: fj-shape
+  data: flights
+  prompt: "Keep every flight to one of the 10 busiest destinations (by number of flights), and nothing else."
+  hint: "Build the top-10 table inside the join: flights |> count(dest) |> slice_max(n, n = 10)."
+  solution: |
+    flights |>
+      semi_join(flights |> count(dest) |> slice_max(n, n = 10), join_by(dest))

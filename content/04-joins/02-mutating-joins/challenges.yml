@@ -1,0 +1,118 @@
+- id: mj-airline-names
+  tier: warm-up
+  type: write
+  skill: mj-lookup
+  data: flights
+  uses: [airlines]
+  prompt: "Add each airline's full name to flights, as the column name from airlines."
+  hint: "airlines is a lookup table keyed by carrier. Which join keeps every flight?"
+  solution: |
+    flights |>
+      left_join(airlines, join_by(carrier))
+
+- id: mj-full-rows
+  tier: warm-up
+  type: predict
+  skill: mj-types
+  data: band_members
+  uses: [band_instruments]
+  prompt: "How many rows does this return?"
+  code: |
+    band_members |>
+      full_join(band_instruments, join_by(name))
+  options: ["4", "3", "2", "6"]
+  verify: 'nrow(result)'
+  explain: "full_join() keeps every name from either table: John and Paul (both), Mick (left only) and Keith (right only). 4 rows, with NA where a side had no row."
+
+- id: mj-plane-year
+  tier: core
+  type: write
+  skill: mj-cols
+  data: flights
+  uses: [planes]
+  prompt: "Add the year each flight's plane was built, as plane_year, keeping flights' own year column as it is."
+  hint: "Select and rename what you need from planes before the join, so nothing clashes."
+  solution: |
+    flights |>
+      left_join(planes |> select(tailnum, plane_year = year), join_by(tailnum))
+
+- id: mj-plane-model
+  tier: core
+  type: write
+  skill: mj-left
+  data: flights
+  uses: [planes]
+  prompt: "Add each flight's plane manufacturer and model, keeping every flight (NA for unknown planes)."
+  hint: "Join only the columns you need: tailnum, manufacturer and model."
+  solution: |
+    flights |>
+      left_join(planes |> select(tailnum, manufacturer, model), join_by(tailnum))
+
+- id: mj-fix-keep-all
+  tier: core
+  type: fix
+  skill: mj-types
+  data: flights
+  uses: [planes]
+  prompt: "This should add the plane type to every flight, with NA where the plane is unknown, but 52,606 flights disappear. Fix it."
+  hint: "Which join drops rows of x that have no match?"
+  starter: |
+    flights |>
+      inner_join(planes |> select(tailnum, type), join_by(tailnum))
+  solution: |
+    flights |>
+      left_join(planes |> select(tailnum, type), join_by(tailnum))
+
+- id: mj-delay-by-airport
+  tier: stretch
+  type: write
+  skill: mj-lookup
+  data: flights
+  uses: [airports]
+  prompt: >-
+    Mean arrival delay by destination airport, labelled with the airport's
+    name (only destinations found in airports). Return name and delay,
+    worst first.
+  hint: "flights calls the key dest and airports calls it faa: join_by(dest == faa). Then summarise by name."
+  solution: |
+    flights |>
+      inner_join(airports, join_by(dest == faa)) |>
+      summarise(delay = mean(arr_delay, na.rm = TRUE), .by = name) |>
+      arrange(desc(delay))
+
+- id: mj-weather-at-departure
+  tier: stretch
+  type: constrained
+  skill: mj-cols
+  data: flights
+  uses: [weather]
+  prompt: >-
+    Add the temperature (temp) and wind speed (wind_speed) at each flight's
+    origin airport in its departure hour, without creating any .x or .y
+    columns. Use join_by().
+  hint: "weather is keyed by origin and time_hour. Join only those two plus the columns you want."
+  solution: |
+    flights |>
+      left_join(weather |> select(origin, time_hour, temp, wind_speed),
+                join_by(origin, time_hour))
+  require: ["join_by"]
+
+- id: mj-unknown-unused
+  tier: brain-melter
+  type: write
+  skill: mj-types
+  data: flights
+  uses: [planes]
+  prompt: >-
+    With one full_join() of the distinct tailnums in flights and the
+    tailnums in planes, count the planes that never appear in flights
+    (planes_unused) and the tailnums in flights that are not in planes
+    (flights_unknown). Return a one-row table.
+  hint: "Mark each side before joining, e.g. mutate(in_flights = TRUE). After a full join, an NA in a marker means that side had no row."
+  solution: |
+    flights |>
+      distinct(tailnum) |>
+      mutate(in_flights = TRUE) |>
+      full_join(planes |> select(tailnum) |> mutate(in_planes = TRUE), join_by(tailnum)) |>
+      summarise(planes_unused = sum(is.na(in_flights)),
+                flights_unknown = sum(is.na(in_planes)))

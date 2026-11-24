@@ -1,0 +1,125 @@
+- id: key-airport-names
+  tier: warm-up
+  type: write
+  skill: k-check
+  data: airports
+  prompt: "Is name a key of airports? Return each airport name that appears more than once, with n."
+  hint: "count() the column, then keep the counts above 1."
+  solution: |
+    airports |>
+      count(name) |>
+      filter(n > 1)
+
+- id: key-airlines-predict
+  tier: warm-up
+  type: predict
+  skill: k-primary
+  data: airlines
+  prompt: "airlines has 16 rows, one per airline: carrier (a code like \"AA\") and name. How many rows does this return?"
+  code: |
+    airlines |>
+      count(carrier) |>
+      filter(n > 1)
+  options: ["0", "1", "16"]
+  verify: 'nrow(result)'
+  explain: "carrier is the primary key of airlines: each code appears once, so no count is above 1 and the result is empty. An empty result is what a key check should give."
+
+- id: key-flight-numbers
+  tier: core
+  type: write
+  skill: k-compound
+  data: flights
+  prompt: >-
+    A flight number is reused every day, and by different airlines. Even
+    year, month, day, carrier and flight together are almost, but not quite,
+    a key of flights. Return the combinations that occur more than once, with n.
+  hint: "count() can take several columns at once."
+  solution: |
+    flights |>
+      count(year, month, day, carrier, flight) |>
+      filter(n > 1)
+
+- id: key-unknown-planes
+  tier: core
+  type: write
+  skill: k-foreign
+  data: flights
+  uses: [planes]
+  prompt: "Count the flights of each tailnum that has no row in planes, most flights first."
+  hint: "!tailnum %in% planes$tailnum is TRUE for the unknown ones. Filter, then count with sort = TRUE."
+  solution: |
+    flights |>
+      filter(!tailnum %in% planes$tailnum) |>
+      count(tailnum, sort = TRUE)
+
+- id: key-fix-time-hour
+  tier: core
+  type: fix
+  skill: k-compound
+  data: weather
+  prompt: >-
+    weather has one row per airport (origin) and hour. This should show that
+    time_hour alone is not a key, by listing each time_hour that appears more
+    than once, with n. It returns nothing. Fix it.
+  hint: "Which columns does the count use? The question is about time_hour alone."
+  starter: |
+    weather |>
+      count(origin, time_hour) |>
+      filter(n > 1)
+  solution: |
+    weather |>
+      count(time_hour) |>
+      filter(n > 1)
+
+- id: key-unknown-count
+  tier: stretch
+  type: predict
+  skill: k-foreign
+  data: flights
+  uses: [planes]
+  prompt: "flights has 336,776 rows and 4,044 distinct tailnums; planes has 3,322. How many flights does this keep?"
+  code: |
+    flights |>
+      filter(!tailnum %in% planes$tailnum)
+  options: ["52606", "722", "2512", "0"]
+  verify: 'nrow(result)'
+  explain: >-
+    52,606 flights have a tailnum with no row in planes. They come from 722
+    distinct tailnums (722 is the number of missing planes, not flights).
+    2,512 of the flights have no tailnum at all, and NA is not in planes either.
+
+- id: key-dst-hour
+  tier: stretch
+  type: constrained
+  skill: k-compound
+  data: weather
+  prompt: >-
+    weather has origin, year, month, day and hour, and also time_hour, the
+    same moment as a date-time. Show that origin, year, month, day and hour
+    are not quite a key: return the combinations that occur more than once,
+    with n, without using time_hour.
+  hint: "Count the five columns. Then look at the date: what happens to clocks at 1 am that night?"
+  solution: |
+    weather |>
+      count(origin, year, month, day, hour) |>
+      filter(n > 1)
+  forbid: ["time_hour"]
+  explain: >-
+    On 3 November 2013 daylight saving time ended, so 1 am happened twice.
+    The clock hour repeats, but time_hour is a point in time and does not,
+    which is why origin and time_hour together are the key of weather.
+
+- id: key-unknown-share
+  tier: brain-melter
+  type: write
+  skill: k-foreign
+  data: flights
+  uses: [planes]
+  prompt: >-
+    For each carrier, what share of its flights has a tailnum that is not in
+    planes? Return carrier and unknown (a proportion), largest first.
+  hint: "The mean of a TRUE/FALSE column is the share of TRUEs."
+  solution: |
+    flights |>
+      summarise(unknown = mean(!tailnum %in% planes$tailnum), .by = carrier) |>
+      arrange(desc(unknown))

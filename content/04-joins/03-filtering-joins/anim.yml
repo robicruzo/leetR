@@ -1,0 +1,24 @@
+data: band_members
+with: band_instruments
+steps:
+  - code: ""
+    show: "band_members                       band_instruments"
+    pair: true
+    tint: name
+    caption: "The same two tables. A filtering join only looks across to ask: does this name exist on the right?"
+  - code: "semi_join(band_instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "semi_join() keeps the rows of x that have a match: John and Paul. Nothing comes across; the columns stay name and band."
+    skill: fj-semi
+  - from_data: true
+    code: ""
+    show: "band_members                       band_instruments"
+    pair: true
+    tint: name
+    caption: "Back to the two tables."
+  - code: "anti_join(band_instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "anti_join() keeps the rows of x with no match: only Mick. It is how you find the keys that don't connect."
+    skill: fj-anti

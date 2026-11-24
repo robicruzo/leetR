@@ -54,7 +54,11 @@
 	}
 
 	const tintOrder = $derived([
-		...new Set(steps.flatMap((s) => (s.tint ? s.rows.map((r) => r.t ?? '') : [])).filter((t) => t && !SPECIES[t]))
+		...new Set(
+			steps
+				.flatMap((s) => (s.tint ? [...s.rows, ...(s.side?.rows ?? [])].map((r) => r.t ?? '') : []))
+				.filter((t) => t && !SPECIES[t])
+		)
 	]);
 	const tintClass = (t: string) => SPECIES[t] ?? PALETTE[tintOrder.indexOf(t) % PALETTE.length] ?? '';
 
@@ -90,6 +94,19 @@
 				}
 			});
 		});
+		if (s.side) {
+			// The second table of a join, one empty column to the right. Rows
+			// are tinted by their key, so matching keys share a colour.
+			const off = s.cols.length + 1;
+			s.side.cols.forEach((name, i) => put('h|' + s.side!.ids[i], off + i, 0, name, 'hdr'));
+			s.side.rows.forEach((row, ri) => {
+				const tint = s.tint && row.t ? tintClass(row.t) : '';
+				s.side!.cols.forEach((_, i) => {
+					const v = row.v[i];
+					put(row.k + '|' + s.side!.ids[i], off + i, ri + 1, v, [tint, valueClass(v)].filter(Boolean).join(' '));
+				});
+			});
+		}
 		if (s.bands) {
 			const counts: Record<string, number> = {};
 			for (const row of s.rows) counts[row.t ?? ''] = (counts[row.t ?? ''] ?? 0) + 1;
@@ -105,8 +122,10 @@
 	}
 
 	const frames = $derived(steps.map(layout));
-	const ncols = $derived(Math.max(...steps.map((s) => s.cols.length + (s.bands ? 1 : 0))));
-	const nrows = $derived(Math.max(...steps.map((s) => rowsOf(s).at(-1) ?? 1)));
+	const ncols = $derived(
+		Math.max(...steps.map((s) => s.cols.length + (s.bands ? 1 : 0) + (s.side ? s.side.cols.length + 1 : 0)))
+	);
+	const nrows = $derived(Math.max(...steps.map((s) => Math.max(rowsOf(s).at(-1) ?? 1, s.side?.rows.length ?? 0))));
 	const allIds = $derived([...new Set(frames.flatMap((f) => f.map((t) => t.id)))]);
 
 	/**

@@ -41,10 +41,25 @@ new_env <- function() { e <- new.env(parent = globalenv()); e$penguins_sample <-
 #                          tile travels from its wide cell to its long row
 #   widen: {names, values} several rows become one (pivot_wider); each new
 #                          cell takes the one tile it came from
+#   pair: true             draw the second table (`with:`) beside the first
+#   join: true             a join of the two: x tiles stay, y tiles fly into
+#                          their matched rows, unmatched rows fade
 # Rows a step adds with no source (e.g. complete()) get new keys and fade in.
+#
+# For joins, anim.yml names a second table: `with: band_instruments` (or any
+# expression, with `with_name:` for the name the step code uses; not `y:`,
+# which YAML 1.1 reads as TRUE). Its rows are
+# keyed y1, y2, ... and its columns y:<name>, so the same column name in both
+# tables stays two different tiles.
 build_anim <- function(a, mod_id) {
   env <- new_env()
   data0 <- run_code(a$data, env)
+  y_data <- NULL
+  if (!is.null(a$with)) {
+    y_data <- run_code(a$with, env)
+    y_data$.yid <- paste0("y", seq_len(nrow(y_data)))
+    assign(if (!is.null(a$with_name)) a$with_name else a$with, y_data, envir = env)
+  }
   if (!".id" %in% names(data0)) {
     data0$.id <- if (nrow(data0) <= nrow(penguins_sample)) penguins_sample$.id[seq_len(nrow(data0))] else as.character(seq_len(nrow(data0)))
   }
@@ -99,8 +114,26 @@ build_anim <- function(a, mod_id) {
       }, ""))
       cur$.id <- paste0("w:", out_keys)
       cur <- relocate(cur, .id)
+    } else if (isTRUE(s$join) && ".yid" %in% names(cur)) {
+      # Mutating join: each cell comes from its x row or its y row.
+      xid <- cur$.id; yid <- cur$.yid
+      y_cols <- setdiff(names(y_data), ".yid")
+      src <- lapply(seq_len(nrow(cur)), function(r) vapply(setdiff(names(cur), c(".id", ".yid")), function(nm) {
+        bare <- sub("[.](x|y)$", "", nm)
+        from_x <- if (grepl("[.]x$", nm)) bare else if (nm %in% names(base)) nm else NA
+        from_y <- if (grepl("[.]y$", nm)) bare else if (nm %in% y_cols) nm else NA
+        if (!is.na(from_x) && !is.na(xid[r])) paste0(xid[r], "|", colid_of(from_x))
+        else if (!is.na(from_y) && !is.na(yid[r])) paste0(yid[r], "|y:", from_y)
+        else NA_character_
+      }, ""))
+      for (nm in setdiff(names(cur), c(".id", ".yid", names(base)))) {
+        bare <- sub("[.]y$", "", nm)
+        if (bare %in% y_cols) colid[[nm]] <- paste0("y:", bare)
+      }
+      cur$.id <- ifelse(is.na(xid), yid, ifelse(is.na(yid), xid, paste0(xid, "+", yid)))
+      cur$.yid <- NULL
     } else if (!".id" %in% names(cur)) {
-      if (nrow(cur) == nrow(base)) cur$.id <- base$.id else problem(where, ": rows changed without a merge, split or widen")
+      if (nrow(cur) == nrow(base)) cur$.id <- base$.id else problem(where, ": rows changed without a merge, split, widen or join")
     }
     if (".id" %in% names(cur)) {
       new_rows <- which(is.na(cur$.id))
@@ -119,6 +152,21 @@ build_anim <- function(a, mod_id) {
       if (!is.null(src)) row$src <- I(unname(src[[r]][vis]))
       row
     })
+    # A pair step also draws the second table, to the right of the first.
+    side <- NULL
+    if (isTRUE(s$pair)) {
+      if (is.null(y_data)) problem(where, ": pair needs a `with:` table in anim.yml")
+      else {
+        y_vis <- setdiff(names(y_data), ".yid")
+        y_tint <- if (!is.null(s$tint_y)) s$tint_y else s$tint
+        side <- list(cols = I(y_vis), ids = I(paste0("y:", y_vis)),
+                     rows = lapply(seq_len(nrow(y_data)), function(r) {
+                       row <- list(k = y_data$.yid[r], v = I(unname(vapply(y_vis, function(nm) fmt(y_data[[nm]][r]), ""))))
+                       if (!is.null(y_tint) && y_tint %in% y_vis) row$t <- fmt(y_data[[y_tint]][r])
+                       row
+                     }))
+      }
+    }
     if (isTRUE(s$bands) && !is.null(s$tint)) {
       ord <- order(match(vapply(rows, `[[`, "", "t"), unique(vapply(rows, `[[`, "", "t"))))
       rows <- rows[ord]
@@ -132,7 +180,7 @@ build_anim <- function(a, mod_id) {
       by = AI(by_cols), merged = !is.null(merge) || !is.null(widen),
       hl = if (!is.null(s$hl)) AI(unlist(s$hl)) else NULL,
       late = if (!is.null(s$late)) AI(unlist(s$late)) else NULL,
-      skill = s$skill
+      skill = s$skill, side = side
     )
     prev <- cur
   }
@@ -171,7 +219,7 @@ check_challenge <- function(ch, mod_id) {
               hint = ch$hint, solution = ch$solution, starter = ch$starter, code = ch$code,
               explain = ch$explain, data = if (!is.null(ch$data)) ch$data else "penguins",
               forbid = AI(unlist(ch$forbid)), require = AI(unlist(ch$require)), compare = ch$compare,
-              robust = if (isFALSE(ch$robust)) FALSE else NULL)
+              robust = if (isFALSE(ch$robust)) FALSE else NULL, uses = AI(unlist(ch$uses)))
   if (is.null(res)) return(out)
   if (is.data.frame(res)) out$dims <- sprintf("%s rows × %s columns", format(nrow(res), big.mark = ","), ncol(res))
   out$expected <- printed(res)
@@ -263,8 +311,8 @@ track$diagnostic <- lapply(track$diagnostic, function(q) verify_mcq(q, paste0("d
 track$final$questions <- lapply(track$final$questions, function(q) verify_mcq(q, paste0("final/", q$id)))
 track$final$integrative <- check_challenge(c(track$final$integrative, list(type = "write", tier = "integrative", skill = "all")), "final")
 track$modules <- mods
-data_names <- unique(c(unlist(lapply(mods, function(m) vapply(m$challenges, `[[`, "", "data"))),
-                       track$final$integrative$data))
+data_names <- unique(c(unlist(lapply(mods, function(m) lapply(m$challenges, function(ch) c(ch$data, unlist(ch$uses))))),
+                       track$final$integrative$data, unlist(track$final$integrative$uses)))
 track$datasets <- setNames(lapply(data_names, function(d) tryCatch(dataset_info(d), error = function(e) {
   problem("dataset ", d, ": ", conditionMessage(e)); NULL })), data_names)
 pkgs <- c("dplyr", "tidyr", "ggplot2", "palmerpenguins")

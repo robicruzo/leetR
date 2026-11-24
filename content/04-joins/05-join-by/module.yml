@@ -1,0 +1,76 @@
+id: 05-join-by
+title: "join_by(): ranges, inequalities and the closest match"
+key_idea: >-
+  Keys do not have to be equal to match. join_by() accepts conditions:
+  between(x, lower, upper) puts a value in a range, an inequality such as
+  x >= from matches every row that passes, and closest(x >= from) keeps
+  only the nearest of those (a rolling join). Inequality joins can match
+  many rows per x row, so check the row count.
+subskills:
+  - {id: jb-between, name: "between(): a value falls in a range"}
+  - {id: jb-inequality, name: "Inequality joins can match many rows"}
+  - {id: jb-closest, name: "closest(): only the nearest match"}
+readings:
+  - {label: "r4ds 19.5, Non-equi joins", url: "https://r4ds.hadley.nz/joins.html#non-equi-joins"}
+  - {label: "dplyr: join_by() helpers", url: "https://dplyr.tidyverse.org/reference/join_by.html"}
+  - {label: "STAT 7500 primer ch. 7 (joins)", url: ""}
+
+predict:
+  skill: jb-inequality
+  code: |
+    penguins_sample |>
+      select(species, body_mass_g) |>
+      inner_join(mass_bands, join_by(body_mass_g >= from))
+  ask: >-
+    mass_bands has three bands starting at 2,500 g (light), 3,500 g (medium)
+    and 4,500 g (heavy). The 8 sample penguins weigh 3750, 3500, 4500, 3400,
+    NA, 3900, 3250 and 5700 g. What shape is the result?
+  show_data: true
+  options:
+    - {choice: "14 × 5", correct: true}
+    - choice: "7 × 5"
+      misconception: one-match-each
+      probe: "Take the 5,700 g penguin. Is 5700 >= 2500? >= 3500? >= 4500? How many bands does it match?"
+    - choice: "8 × 5"
+      misconception: na-matches
+      probe: "The NA penguin: is NA >= 2500 TRUE? Does an inner join keep a row with no match?"
+    - choice: "24 × 5"
+      misconception: cross-join
+      probe: "Does a 3,250 g penguin pass body_mass_g >= 3500?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-between-na
+    skill: jb-between
+    ask: "penguins |> left_join(mass_bands, join_by(between(body_mass_g, from, to))): what band does a penguin with NA body mass get?"
+    options:
+      - {choice: "NA", correct: true}
+      - choice: "light, the first band"
+        misconception: na-is-lowest
+        probe: "Is NA between 2500 and 3499? Is it anywhere?"
+      - choice: "The row is dropped"
+        misconception: left-drops
+        probe: "Which join is this? What does it do with x rows that match nothing?"
+    right_followup: "Are you sure? How many penguins in penguins get that?"
+    explain: >-
+      NA is not between anything, so it matches no band; left_join() keeps
+      the row and fills band, from and to with NA. In penguins that happens
+      to the 2 penguins with no measurements.
+    verify: 'sum(is.na((penguins |> dplyr::left_join(mass_bands, dplyr::join_by(dplyr::between(body_mass_g, from, to))))$band)) == 2'
+  - id: p-closest
+    skill: jb-closest
+    ask: "With join_by(closest(body_mass_g >= from)), which band does a 4,600 g penguin get?"
+    options:
+      - {choice: "heavy (from 4,500)", correct: true}
+      - choice: "light, medium and heavy"
+        misconception: closest-is-inequality
+        probe: "Those are all the bands with from <= 4600. What does closest() add on top of >=?"
+      - choice: "light (from 2,500)"
+        misconception: closest-is-first
+        probe: "Of 2500, 3500 and 4500, which is closest to 4600?"
+    right_followup: "Are you sure? What would closest(body_mass_g <= from) give instead?"
+    explain: >-
+      body_mass_g >= from alone matches every band starting at or below
+      4,600 g. closest() keeps only the nearest of those, the largest from:
+      4,500, the heavy band. This is a rolling join.
+    verify: 'identical((tibble::tibble(body_mass_g = 4600L) |> dplyr::left_join(mass_bands, dplyr::join_by(dplyr::closest(body_mass_g >= from))))$band, "heavy")'

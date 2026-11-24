@@ -1,5 +1,5 @@
 {
 	"rVersion": "4.6",
-	"packages": ["dplyr", "tidyr", "purrr", "stringr", "waldo", "palmerpenguins", "ggplot2"],
+	"packages": ["dplyr", "tidyr", "purrr", "stringr", "waldo", "palmerpenguins", "ggplot2", "nycflights13"],
 	"buildPackages": ["yaml", "jsonlite"]
 }

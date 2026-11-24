@@ -50,6 +50,8 @@ export interface AnimStep {
 	by: string[] | null;
 	merged: boolean;
 	skill: string | null;
+	/** A second table drawn to the right (joins): y rows keyed y1, y2, … */
+	side?: { cols: string[]; ids: string[]; rows: AnimRow[] } | null;
 }
 
 export type Tier = 'warm-up' | 'core' | 'stretch' | 'brain-melter' | 'integrative';
@@ -72,6 +74,7 @@ export interface TrackChallenge {
 	require: string[] | null;
 	compare: { ignore_row_order?: boolean; ignore_column_order?: boolean } | null;
 	robust: boolean | null;
+	uses?: string[] | null; // other datasets the challenge needs (joins)
 	dims?: string;
 	expected?: string;
 	options?: string[];

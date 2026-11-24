@@ -1,0 +1,18 @@
+data: instruments
+steps:
+  - code: ""
+    show: instruments
+    tint: name
+    caption: "instruments: who plays what. Each colour is one name. Could name identify a row?"
+  - code: "arrange(name)"
+    tint: name
+    caption: "Sorted by name, the problem is easy to see: John has two rows, guitar and piano."
+    skill: k-primary
+  - code: "count(name)"
+    merge: {by: [name], pour: {"n": plays}}
+    tint: name
+    caption: "count() makes one row per name. A key would give n = 1 everywhere; John has n = 2."
+    skill: k-check
+  - code: "filter(n > 1)"
+    tint: name
+    caption: "Keep only the repeats. For a real key this table is empty. Here it is not, so name is not a key of instruments."

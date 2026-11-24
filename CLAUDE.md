@@ -151,7 +151,7 @@ Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
 | 1 | R foundations | atomic vectors and types · coercion · vectorization and recycling · logical operators and NA · subsetting `[` `[[` `$` · lists | – | Adv R 3–4, r4ds 12, 27, primer 2 |
 | 2 | One-table wrangling (**built**) | filter · arrange + slice_* · select + rename · mutate + if_else + case_when · summarise · group_by + summarise · across | 1 | r4ds 3, MDSR 4, primer 6 |
 | 3 | Tidy data and reshaping (**built**) | what makes data tidy · pivot_longer · pivot_wider · separate_wider_* and unite · explicit vs implicit missing | 2 | r4ds 5, 18, MDSR 6, primer 8 |
-| 4 | Joins | keys · mutating joins · filtering joins · duplicate keys, many-to-many · join_by inequality/rolling | 2 | r4ds 19, MDSR 5, primer 7 |
+| 4 | Joins (**built**) | keys · mutating joins · filtering joins · duplicate keys, many-to-many · join_by inequality/rolling | 2 | r4ds 19, MDSR 5, primer 7 |
 | 5 | Real-world data types | import + cleaning (readr, janitor) · counts and proportions (marginal/joint/conditional) · stringr · regex · forcats · lubridate | 2 | r4ds 7, 14–17, primer 8–10 |
 | 6 | Visualization | aes vs constants · geoms and stats · positions (counts vs proportions) · scales and coords · facets · labels/themes/annotations | 2 | r4ds 1, 9–11, MDSR 2–3, primer 4–5 |
 | 7 | Programming | functions · conditionals · for loops + preallocation · map family · tidy eval `{{ }}` `.data` · errors/warnings/stopifnot | 2 | r4ds 25–26, MDSR 7, Adv R 8, primer 11 |
@@ -219,6 +219,10 @@ check only); `scripts/fetch-assets.mjs` mirrors both from repo.r-wasm.org.
 2. Evaluate learner code and solution in fresh envs (parent = global, where
    `setup.R` ran), with `set.seed(1)`. The last value is the answer.
 3. `ungroup()` → `as_tibble()` → optional row sort → `waldo::compare()`.
+   Tables over 2,000 rows skip waldo's full diff, which took minutes on two
+   300,000-row tables of different lengths: the grader reports a row-count
+   mismatch in one line, column differences via the zero-row prototypes, and
+   otherwise finds differing rows itself and lets waldo show the first 10.
 4. Re-run both on a seeded **half** sample of the dataset (bound to the same
    name), so a typed-in answer fails. Opt out per challenge with `robust: false`.
    An 80% sample let six "extremes" challenges (top five, max per group) pass
@@ -226,7 +230,8 @@ check only); `scripts/fetch-assets.mjs` mirrors both from repo.r-wasm.org.
 
 **selftest.R** fails the build unless: every solution passes against itself;
 every fix starter fails; a `deparse()`d literal of each expected answer fails
-(unless `robust: false`); each forbidden token slipped into the solution is caught.
+(unless `robust: false`; skipped for answers over 2,000 rows, which nobody
+types in); each forbidden token slipped into the solution is caught.
 
 Totals:
 
@@ -234,6 +239,7 @@ Totals:
 |---|---|---|---|---|---|---|
 | 2, `content/02-wrangling` | 7 | 30 | 56 | 14 | 43 | 1,429 |
 | 3, `content/03-tidy` | 5 | 19 | 40 | 10 | 25 | 1,152 |
+| 4, `content/04-joins` | 5 | 18 | 40 | 10 | 21 | 1,208 |
 
 ### Content format
 
@@ -288,6 +294,19 @@ steps:
     widen: {names: measure, values: mm}        # several rows -> one; runs without .id;
                                                #   id columns merge, each new cell takes its tile
 ```
+Joins: `with: band_instruments` names a second table (an expression, plus
+`with_name:` if the step code refers to it by another name; **not `y:`**, which
+YAML 1.1 reads as TRUE). Its rows are keyed `y1, y2, …`, its columns `y:<name>`.
+```yaml
+  - code: ""
+    pair: true                                 # draw the `with` table beside x
+    tint: name                                 # tint both by the key: matching keys share a colour
+    tint_y: none                               # (optional) another tint column for y, or none
+  - code: "left_join(band_instruments, join_by(name))"
+    join: true                                 # x tiles stay, y tiles fly to their matched rows
+```
+A joined row's key is `<x id>+<y id>` (or one of them for unmatched rows).
+Filtering joins keep `.id` and need nothing special.
 Row identity is the hidden `.id` column (tile key `<row key>|<column id>`).
 After `split`, row keys become `<id>:<name>`. Rows a step adds with no source
 (`complete()`) get keys `+<n>` and fade in; duplicate keys fail the build. A
@@ -299,7 +318,9 @@ order of first appearance. List-column cells print like tibble (`<dbl [2]>`).
 **challenges.yml** fields: `id, tier (warm-up|core|stretch|brain-melter),
 type (write|fix|constrained|predict), skill, data (default penguins), prompt,
 hint, solution, starter (fix), forbid, require (token lists checked on parse
-data), compare: {ignore_row_order, ignore_column_order}, robust`; predict
+data), compare: {ignore_row_order, ignore_column_order}, robust, uses`
+(other datasets the challenge needs, e.g. `[planes]`: shown with their columns
+next to the prompt; the half-sample re-run only touches `data`); predict
 type adds `code, options, verify, explain`. Use `ignore_column_order` when a
 correct answer can order columns differently (pivot_wider names columns in
 order of first appearance; unite() puts the new column first). `robust: false`
@@ -310,14 +331,18 @@ Datasets: `penguins_sample` and `stocks` (7-row quarterly prices with one
 explicit NA and one absent row, after r4ds 18.3) are defined in
 `content/setup.R`; tidyr's `table1`–`table5`, `billboard`, `relig_income`,
 `who2`, `world_bank_pop`, `fish_encounters`, `us_rent_income` come with tidyr.
+Track 4 uses nycflights13 (`flights`, `airlines`, `airports`, `planes`,
+`weather`), dplyr's `band_members` / `band_instruments` / `band_instruments2`,
+and from setup.R: `instruments` (band_instruments plus John on piano, so name
+repeats), `mass_bands` (made-up penguin mass ranges) and `fees` (made-up fee
+by flight distance). Grading a join over all of flights takes about 1 s in webR.
 
 **Animation sample:** `penguins_sample <- penguins[c(1, 277, 153, 21, 4, 278, 31, 154), ]`
 with `.id` = those row numbers (tile keys). Row 4 has NA mass and NA sex on
 purpose.
 
-**Datasets used:** palmerpenguins `penguins`; dplyr `starwars`, `storms`;
-ggplot2 `mpg`. nycflights13 could not be installed in the chat's workspace,
-but it **does** have a webR build: bring the flights data back (the primer uses it).
+**Datasets used:** see above. nycflights13 (webR build 1.0.2, 4.5 MB) is now
+installed and attached by setup.R.
 
 ### What build.R checks (fails the build on any problem)
 - every animation step runs; collapsing steps declare `merge`;
@@ -409,11 +434,12 @@ It runs under webR (`.build_args` set by check.mjs) or native R
    with the split/widen animation steps (section 5). Checked in the browser:
    pivot tiles move cell to cell, widen merges, the list-column case,
    complete()'s new row, and pipeline grading with relaxed column order.
-   Next track by curriculum order: **Track 4, Joins** (needs a key-matcher
-   visual; a join's row identity is a pair of source rows, so expect another
-   step type like `split`/`widen`).
-4. Bring back **nycflights13** challenges (add it to `r-packages.json`; it is
-   on repo.r-wasm.org, 1.0.2).
+4. ~~**Track 4, joins**~~ (and nycflights13). **Done 2026-11-24**: 5 modules
+   with the pair/join animation steps; the key matcher is a shared tint per
+   key value. Checked in the browser: tiles fly from y into matched rows,
+   grading joins on all of flights (~1 s; a wrong answer ~1–3 s).
+   Next by curriculum order: Track 5 (real-world data types), Track 6
+   (visualization), or Track 1 (foundations, not yet written).
 5. Consider adding `filter_out()` / `when_any()` to the filter module.
 6. Write the **lubridate** track and the **janitor** modules (section 4).
 7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
@@ -462,6 +488,11 @@ It runs under webR (`.build_args` set by check.mjs) or native R
 - **Service worker:** preview servers send `Vary: Origin`, and module imports
   carry an `Origin` header that precache requests don't, so `cache.match`
   missed every lazily loaded chunk offline. The fix is `ignoreVary: true`.
+- YAML 1.1 again: an anim.yml key `y:` silently became `TRUE`, so the
+  second table never loaded. Hence `with:`.
+- Grading errors used to vanish: captureR() with captured conditions turned
+  an R error inside the grader into an empty "Wrong answer". The engine now
+  passes `captureConditions: false`, so such errors are reported.
 - Captions and prompts are prose, so no check can catch a wrong claim in
   them. A caption said `<int [2]>` for table2's list-column, but `count` is
   a double (`<dbl [2]>`); it was only caught by looking at the animation.

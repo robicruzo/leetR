@@ -143,7 +143,7 @@
 				<p><b>{i + 1}.</b> {ch.prompt}</p>
 				{#each rules(ch) as r (r)}<p class="small">{r}</p>{/each}
 				{#if ch.type === 'predict'}
-					<DataColumns name={ch.data} info={track.datasets[ch.data]} />
+					{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
 					<Mcq q={predictQ(ch)} onanswer={(first) => progress.predicted(key, ch, first)} />
 				{:else}
 					<a class="btn" href={resolve('/t/[track]/m/[module]/c/[challenge]', { track: track.id, module: m.id, challenge: ch.id })}>

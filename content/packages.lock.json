@@ -19,6 +19,7 @@
     "labeling": "0.4.3",
     "lifecycle": "1.0.5",
     "magrittr": "2.0.5",
+    "nycflights13": "1.0.2",
     "palmerpenguins": "0.1.1",
     "pillar": "1.11.1",
     "pkgconfig": "2.0.3",

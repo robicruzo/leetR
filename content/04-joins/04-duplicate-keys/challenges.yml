@@ -1,0 +1,130 @@
+- id: dk-rows-unchanged
+  tier: warm-up
+  type: predict
+  skill: dk-multiply
+  data: flights
+  uses: [planes]
+  prompt: "flights has 336,776 rows; tailnum is a key of planes, and 52,606 flights have no match there. How many rows does this return?"
+  code: |
+    flights |>
+      left_join(planes, join_by(tailnum))
+  options: ["336776", "284170", "3322", "389382"]
+  verify: 'nrow(result)'
+  explain: "tailnum is unique in planes, so no flight can match twice, and left_join() keeps the unmatched ones: the row count is unchanged. 284,170 would be inner_join() (336,776 − 52,606)."
+
+- id: dk-dest-name
+  tier: warm-up
+  type: write
+  skill: dk-keyname
+  data: flights
+  uses: [airports]
+  prompt: "Add each flight's destination airport name, as dest_name, keeping every flight."
+  hint: "airports calls the code faa. Rename name on the way in: airports |> select(faa, dest_name = name)."
+  solution: |
+    flights |>
+      left_join(airports |> select(faa, dest_name = name), join_by(dest == faa))
+
+- id: dk-many-to-one
+  tier: core
+  type: constrained
+  skill: dk-relationship
+  data: flights
+  uses: [planes]
+  prompt: >-
+    Add each flight's plane type, keeping every flight, and make dplyr check
+    that no flight matches more than one plane (each plane can fly many
+    flights).
+  hint: "relationship = describes the join from x's point of view: many flights, one plane."
+  solution: |
+    flights |>
+      left_join(planes |> select(tailnum, type), join_by(tailnum),
+                relationship = "many-to-one")
+  require: ["relationship"]
+
+- id: dk-fix-weather-day
+  tier: core
+  type: fix
+  skill: dk-multiply
+  data: flights
+  uses: [weather]
+  prompt: >-
+    This should add the weather at departure to the New Year's Day flights
+    (one weather row per flight), but the result has many times more rows
+    than flights, and a warning. Fix it by matching each flight to the
+    weather for its origin and departure hour (time_hour).
+  hint: "Matching on the day pairs each flight with all 24 hours of that day's weather."
+  starter: |
+    flights |>
+      filter(month == 1, day == 1) |>
+      left_join(weather, join_by(origin, year, month, day))
+  solution: |
+    flights |>
+      filter(month == 1, day == 1) |>
+      left_join(weather, join_by(origin, time_hour))
+
+- id: dk-origin-names
+  tier: core
+  type: write
+  skill: dk-keyname
+  data: flights
+  uses: [airports]
+  prompt: "Count the flights from each NYC airport (origin), and add the airport's full name as name."
+  hint: "Count first: three rows are cheaper to join than 336,776. The key is origin in one table and faa in the other."
+  solution: |
+    flights |>
+      count(origin) |>
+      left_join(airports |> select(faa, name), join_by(origin == faa))
+
+- id: dk-day-rows
+  tier: stretch
+  type: predict
+  skill: dk-relationship
+  data: flights
+  uses: [weather]
+  prompt: "There were 842 flights on New Year's Day; weather has up to 24 rows per airport and day. How many rows does this return?"
+  code: |
+    flights |>
+      filter(month == 1, day == 1) |>
+      left_join(weather, join_by(origin, year, month, day))
+  options: ["18764", "842", "20208", "An error"]
+  verify: 'nrow(result)'
+  explain: >-
+    Each flight pairs with every weather row of its airport and day, and the
+    keys repeat on both sides, so dplyr warns about a many-to-many
+    relationship. It is not 842 × 24 = 20,208, because some airport-hours
+    are missing from weather.
+
+- id: dk-all-instruments
+  tier: stretch
+  type: write
+  skill: dk-multiply
+  data: band_members
+  uses: [instruments]
+  prompt: >-
+    instruments has two rows for John. For each band member who plays
+    something, return name, band and plays, with all their instruments in
+    one string, such as "guitar, piano".
+  hint: "Join (the rows multiply), then summarise them back to one row per member with paste(plays, collapse = \", \")."
+  solution: |
+    band_members |>
+      inner_join(instruments, join_by(name)) |>
+      summarise(plays = paste(plays, collapse = ", "), .by = c(name, band))
+  # band_members has 3 rows: too few to re-run on half of it.
+  robust: false
+
+- id: dk-missing-weather
+  tier: brain-melter
+  type: write
+  skill: dk-relationship
+  data: flights
+  uses: [weather]
+  prompt: >-
+    After flights |> left_join(weather, join_by(origin, time_hour)), some
+    flights get NA weather because no weather row matched, and others
+    because the weather value itself was missing. Count, per origin, the
+    flights with no matching weather row at all.
+  hint: "A filtering join asks exactly the question \"is there a matching row?\"."
+  solution: |
+    flights |>
+      anti_join(weather, join_by(origin, time_hour)) |>
+      count(origin)

@@ -1,0 +1,18 @@
+data: band_members
+with: instruments
+steps:
+  - code: ""
+    show: "band_members                       instruments"
+    pair: true
+    tint: name
+    caption: "This time John has two rows on the right: guitar and piano."
+  - code: "left_join(instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "John matches twice, so his row is copied: once for each instrument. 3 band members became 4 rows."
+    skill: dk-multiply
+  - code: "count(name)"
+    merge: {by: [name], pour: {"n": plays}}
+    tint: name
+    caption: "Counting rows per name shows the copy. After a join, compare nrow() before and after; a jump means a key repeated."
+    skill: dk-relationship

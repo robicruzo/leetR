@@ -129,7 +129,7 @@
 					<span class="tier">data: {ch.data}</span>
 				</div>
 				<p class="prompt">{ch.prompt}</p>
-				<DataColumns name={ch.data} info={track.datasets[ch.data]} />
+				{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
 				{#each rules as [label, toks] (label)}
 					<p class="small">{label}: {#each toks as t (t)}<code>{t}</code> {/each}</p>
 				{/each}

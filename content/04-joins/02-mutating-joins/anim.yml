@@ -1,0 +1,30 @@
+data: band_members
+with: band_instruments
+steps:
+  - code: ""
+    show: "band_members                       band_instruments"
+    pair: true
+    tint: name
+    caption: "Two tables that share the key name. Each colour is one name, so matching rows share a colour: John and Paul are in both, Mick only on the left, Keith only on the right."
+  - code: "left_join(band_instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "left_join() keeps every row of x. John's and Paul's plays tiles fly across to their rows; Mick has no match, so his plays is NA; Keith is not in x, so he goes."
+    skill: mj-left
+  - from_data: true
+    code: ""
+    show: "band_members                       band_instruments"
+    pair: true
+    tint: name
+    caption: "Back to the two tables."
+  - code: "inner_join(band_instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "inner_join() keeps only rows that match on both sides: John and Paul. Mick and Keith both go."
+    skill: mj-types
+  - from_data: true
+    code: "full_join(band_instruments, join_by(name))"
+    join: true
+    tint: name
+    caption: "full_join() keeps everyone: Mick gets NA for plays, Keith gets NA for band, and his name comes from the right-hand table."
+    skill: mj-cols

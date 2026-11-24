@@ -1,0 +1,72 @@
+id: 02-mutating-joins
+title: "Mutating joins: add columns from another table"
+key_idea: >-
+  A mutating join adds y's columns to x, matching rows by key. left_join()
+  keeps every row of x and fills NA where y has no match: it is the join for
+  looking things up. inner_join() keeps only rows that match on both sides,
+  right_join() keeps every row of y, and full_join() keeps everything.
+subskills:
+  - {id: mj-left, name: "left_join keeps every x row; no match gives NA"}
+  - {id: mj-types, name: "inner, right, full: which rows survive"}
+  - {id: mj-cols, name: "Keys appear once; clashing names get .x and .y"}
+  - {id: mj-lookup, name: "Joins as lookups: names from a reference table"}
+readings:
+  - {label: "r4ds 19.3, Basic joins", url: "https://r4ds.hadley.nz/joins.html#sec-mutating-joins"}
+  - {label: "MDSR 5.2, Left join", url: "https://mdsr-book.github.io/mdsr3e/05-dataII.html"}
+  - {label: "STAT 7500 primer ch. 7 (joins)", url: ""}
+
+predict:
+  skill: mj-left
+  code: |
+    band_members |>
+      left_join(band_instruments, join_by(name))
+  ask: "band_members has Mick, John and Paul (name, band); band_instruments has John, Paul and Keith (name, plays). What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "3 × 3", correct: true}
+    - choice: "2 × 3"
+      misconception: left-is-inner
+      probe: "Mick plays nothing in band_instruments. Does left_join() drop him, or keep him with a gap?"
+    - choice: "4 × 3"
+      misconception: left-is-full
+      probe: "Keith is only in band_instruments. Which table's rows does left_join() keep?"
+    - choice: "3 × 4"
+      misconception: key-twice
+      probe: "name is in both tables. Once rows are matched on it, does the result need two name columns?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-inner-rows
+    skill: mj-types
+    ask: "How many rows does band_members |> inner_join(band_instruments, join_by(name)) return?"
+    options:
+      - {choice: "2", correct: true}
+      - choice: "3"
+        misconception: inner-keeps-x
+        probe: "Mick has no match in band_instruments. Which join keeps rows without a match on the other side?"
+      - choice: "4"
+        misconception: inner-is-full
+        probe: "Does an inner join keep Keith, who is only in y?"
+    right_followup: "Are you sure? Which join would return 4 rows, and what would Keith's band be?"
+    explain: >-
+      inner_join() keeps only the names in both tables, John and Paul.
+      left_join() keeps all of x (3 rows), right_join() all of y (3 rows), and
+      full_join() everything (4 rows), with NA wherever a side had no match.
+    verify: 'nrow(band_members |> dplyr::inner_join(band_instruments, dplyr::join_by(name)))'
+  - id: p-suffix
+    skill: mj-cols
+    ask: "flights and planes both have a column year (the flight's year, and the year the plane was built). What does flights |> left_join(planes, join_by(tailnum)) do with them?"
+    options:
+      - {choice: "Keeps both, as year.x (flights) and year.y (planes)", correct: true}
+      - choice: "Stops with an error about the duplicate name"
+        misconception: clash-errors
+        probe: "Could dplyr rename the two columns instead of stopping?"
+      - choice: "Keeps flights' year and silently drops planes'"
+        misconception: x-wins
+        probe: "Would dplyr throw away a column you asked for without saying so?"
+    right_followup: "Are you sure? How would you keep the plane's year under a clearer name, such as plane_year?"
+    explain: >-
+      Non-key columns that share a name both survive, with suffixes .x (from
+      x) and .y (from y). Rename before joining, e.g. planes |> select(tailnum,
+      plane_year = year), or set suffix = c("", "_plane").
+    verify: 'all(c("year.x", "year.y") %in% names(flights |> dplyr::left_join(planes, dplyr::join_by(tailnum))))'

@@ -4,7 +4,7 @@ LeetCode-style R challenges graded by real R in the browser ([webR](https://docs
 
 It has two kinds of content:
 
-- **Tracks** (`content/`): lessons built on a Socratic loop, Predict → Watch → Probe → Do → Review. Each module has a prediction question, a table-morph animation built from real R output, misconception probes, and 8 pipeline challenges graded by R. Track 2, *One-table wrangling* (7 modules, 56 challenges), and Track 3, *Tidy data and reshaping* (5 modules, 40 challenges), are written. Skill levels and spaced review are kept in IndexedDB.
+- **Tracks** (`content/`): lessons built on a Socratic loop, Predict → Watch → Probe → Do → Review. Each module has a prediction question, a table-morph animation built from real R output, misconception probes, and 8 pipeline challenges graded by R. Track 2, *One-table wrangling* (7 modules, 56 challenges), Track 3, *Tidy data and reshaping* (5 modules, 40 challenges), and Track 4, *Joins* (5 modules, 40 challenges, on nycflights13), are written. Skill levels and spaced review are kept in IndexedDB.
 - **Practice challenges** (`src/challenges/`): write a function. It is graded against hidden cases and property tests on random inputs.
 
 ## Running it
@@ -124,7 +124,7 @@ On each case the grader calls both the user's function and the reference, then c
 
 ## Known gaps / next steps
 
-- Tracks 2 and 3 are written. CLAUDE.md §4 has the curriculum and §7 the next steps.
+- Tracks 2, 3 and 4 are written. CLAUDE.md §4 has the curriculum and §7 the next steps.
 - `yaml` and `jsonlite` are mirrored for the content check, so the app also precaches them (about 1 MB it never uses).
 - The soft interrupt didn't stop a bare `repeat {}` in testing, so the worker-restart fallback is what actually ends runaway loops.
 - `grader.R` runs in the same R session as user code. A determined user can tamper with `.leetr`. That's fine for practice, but don't use it for anything high-stakes.

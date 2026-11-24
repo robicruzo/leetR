@@ -112,6 +112,44 @@ local(envir = .leetr, {
     out
   }
 
+  # waldo is thorough but slow on big tables: minutes for two 300,000-row
+  # tables of different lengths. Above this many rows, find the differences
+  # here and let waldo describe only the first few rows.
+  big_rows <- 2000
+
+  rows_that_differ <- function(x, y, tol) {
+    if (is.numeric(x) && is.numeric(y)) {
+      bad <- is.na(x) != is.na(y)
+      both <- !is.na(x) & !is.na(y)
+      bad[both] <- abs(x[both] - y[both]) > tol * pmax(1, abs(y[both]))
+      which(bad)
+    } else {
+      which(!vctrs::vec_equal(x, y, na_equal = TRUE))
+    }
+  }
+
+  compare_big <- function(got, want, opts) {
+    n <- function(x) format(x, big.mark = ",")
+    tol <- opts$tolerance %||% sqrt(.Machine$double.eps)
+    out <- character()
+    if (nrow(got) != nrow(want)) {
+      out <- sprintf("Your result has %s rows; the expected result has %s.", n(nrow(got)), n(nrow(want)))
+    }
+    # Column names and types: compare the zero-row prototypes, which is instant.
+    cols <- as.character(waldo::compare(
+      vctrs::vec_ptype(got), vctrs::vec_ptype(want), x_arg = "yours", y_arg = "expected",
+      tolerance = tol, ignore_attr = opts$ignore_attr %||% FALSE, max_diffs = 10
+    ))
+    if (length(cols)) out <- c(out, paste(c("The columns differ:", cols), collapse = "\n\n"))
+    if (length(out)) return(out)
+    rows <- sort(unique(unlist(lapply(names(want), function(nm) rows_that_differ(got[[nm]], want[[nm]], tol)))))
+    if (!length(rows)) return(character())
+    first <- head(rows, 10)
+    c(sprintf("%s of %s rows differ. The first %d:", n(length(rows)), n(nrow(want)), length(first)),
+      as.character(waldo::compare(got[first, , drop = FALSE], want[first, , drop = FALSE],
+                                  x_arg = "yours", y_arg = "expected", tolerance = tol, max_diffs = 10)))
+  }
+
   compare_values <- function(got, want, opts) {
     if (identical(opts$row_order, "ignore") && is.data.frame(got) && is.data.frame(want)) {
       got <- sort_rows(got)
@@ -120,6 +158,11 @@ local(envir = .leetr, {
     if (identical(opts$column_order, "ignore") && is.data.frame(got) && is.data.frame(want) &&
         setequal(names(got), names(want))) {
       got <- got[names(want)]
+    }
+    if (is.data.frame(got) && is.data.frame(want) && max(nrow(got), nrow(want)) > big_rows) {
+      out <- compare_big(got, want, opts)
+      if (!length(out) && !isFALSE(opts$strict_nan)) out <- nan_mismatch(got, want)
+      return(paste(out, collapse = "\n\n"))
     }
     diff <- waldo::compare(
       got, want,

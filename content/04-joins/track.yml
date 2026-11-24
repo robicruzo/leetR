@@ -1,0 +1,125 @@
+id: joins
+number: 4
+title: "Joins: combining tables"
+summary: >-
+  Real data comes in several tables connected by keys. Learn to check a key,
+  add columns from another table, keep or drop rows by whether they match,
+  and handle repeated keys and range conditions, on the 2013 New York
+  flights data.
+needs: [wrangling]
+modules: [01-keys, 02-mutating-joins, 03-filtering-joins, 04-duplicate-keys, 05-join-by]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-key
+    skill: k-primary
+    module: 01-keys
+    ask: "A column is a primary key of its table when…"
+    options:
+      - {choice: "no value appears in it twice", correct: true}
+      - {choice: "it is the first column", misconception: key-is-position}
+      - {choice: "it has no NA values", misconception: key-is-complete}
+  - id: d-left-rows
+    skill: mj-left
+    module: 02-mutating-joins
+    ask: "x has 10 rows; 3 of them have no match in y, and y's key is unique. How many rows does left_join(x, y) return?"
+    options:
+      - {choice: "10", correct: true}
+      - {choice: "7", misconception: left-is-inner}
+      - {choice: "13", misconception: unmatched-added}
+    verify: "nrow(dplyr::left_join(tibble::tibble(k = 1:10), tibble::tibble(k = 1:7, v = 1), dplyr::join_by(k)))"
+  - id: d-semi-cols
+    skill: fj-shape
+    module: 03-filtering-joins
+    ask: "x has 4 columns and y has 3 (one of them the shared key). How many columns does semi_join(x, y) return?"
+    options:
+      - {choice: "4", correct: true}
+      - {choice: "6", misconception: semi-adds-columns}
+      - {choice: "7", misconception: semi-adds-all}
+    verify: "ncol(dplyr::semi_join(tibble::tibble(k = 1, a = 1, b = 1, c = 1), tibble::tibble(k = 1, d = 1, e = 1), dplyr::join_by(k)))"
+  - id: d-dup-rows
+    skill: dk-multiply
+    module: 04-duplicate-keys
+    ask: "x has one row with key 1; y has three rows with key 1. How many rows does left_join(x, y) return?"
+    options:
+      - {choice: "3", correct: true}
+      - {choice: "1", misconception: one-match-only}
+      - {choice: "4", misconception: x-row-plus-matches}
+    verify: "nrow(dplyr::left_join(tibble::tibble(k = 1), tibble::tibble(k = c(1, 1, 1), v = 1:3), dplyr::join_by(k)))"
+  - id: d-range
+    skill: jb-between
+    module: 05-join-by
+    ask: "A table of age groups has columns lower and upper. Which join_by() puts each person's age into the group whose range contains it?"
+    options:
+      - {choice: "join_by(between(age, lower, upper))", correct: true}
+      - {choice: "join_by(age == lower)", misconception: ranges-need-equality}
+      - {choice: "join_by(age >= lower)", misconception: one-bound-enough}
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-weather-key
+      skill: k-compound
+      ask: "In weather, which columns together are the primary key?"
+      options:
+        - {choice: "origin and time_hour", correct: true}
+        - {choice: "time_hour", misconception: one-column-key}
+        - {choice: "origin, year, month, day and hour", misconception: clock-hour-key}
+      explain: "Each airport has one row per hour, so time_hour alone repeats three times. The clock-hour columns also fail once, at the repeated 1 am when daylight saving time ended on 3 November 2013; time_hour is an instant and does not repeat."
+      verify: 'nrow(weather |> dplyr::count(origin, time_hour) |> dplyr::filter(n > 1)) == 0'
+    - id: fin-right-join
+      skill: mj-types
+      ask: "band_members |> right_join(band_instruments, join_by(name)) returns whose rows?"
+      options:
+        - {choice: "John, Paul and Keith", correct: true}
+        - {choice: "Mick, John and Paul", misconception: right-is-left}
+        - {choice: "John and Paul", misconception: right-is-inner}
+      explain: "right_join() keeps every row of y (band_instruments): John, Paul and Keith, with NA band for Keith."
+      verify: 'identical(sort((band_members |> dplyr::right_join(band_instruments, dplyr::join_by(name)))$name), c("John", "Keith", "Paul"))'
+    - id: fin-anti-rows
+      skill: fj-find
+      ask: "How many rows does flights |> anti_join(airports, join_by(dest == faa)) return?"
+      options:
+        - {choice: "7602", correct: true}
+        - {choice: "4", misconception: counts-keys}
+        - {choice: "0", misconception: all-dests-known}
+      explain: "Four destinations (BQN, PSE, SJU, STT, airports in Puerto Rico and the US Virgin Islands) are missing from airports, and anti_join() returns every flight to them, not one row per destination."
+      verify: "nrow(flights |> dplyr::anti_join(airports, dplyr::join_by(dest == faa)))"
+    - id: fin-one-to-one
+      skill: dk-relationship
+      ask: "What does left_join(x, y, join_by(k), relationship = \"one-to-one\") do when y has a repeated key?"
+      options:
+        - {choice: "Stops with an error", correct: true}
+        - {choice: "Warns and copies the row", misconception: relationship-is-advice}
+        - {choice: "Keeps the first match", misconception: relationship-picks}
+      explain: "relationship states what you expect. If the data breaks it, the join errors instead of quietly growing, which is exactly the point."
+      verify: 'inherits(tryCatch(dplyr::left_join(tibble::tibble(k = 1), tibble::tibble(k = c(1, 1)), dplyr::join_by(k), relationship = "one-to-one"), error = function(e) e), "error")'
+    - id: fin-closest
+      skill: jb-closest
+      ask: "fees has from_distance 0, 500, 1000 and 2000. With join_by(closest(distance >= from_distance)), which row does a 1,000-mile flight get?"
+      options:
+        - {choice: "from_distance 1000", correct: true}
+        - {choice: "from_distance 500", misconception: closest-is-strict}
+        - {choice: "from_distance 2000", misconception: closest-rounds-up}
+      explain: ">= includes equality, so 1,000 passes the 1000 row, and it is the closest. Use > for strictly above."
+      verify: '(tibble::tibble(distance = 1000) |> dplyr::left_join(fees, dplyr::join_by(dplyr::closest(distance >= from_distance))))$from_distance == 1000'
+  integrative:
+    id: fin-manufacturer-delay
+    data: flights
+    uses: [planes]
+    prompt: >-
+      Which plane manufacturers have the worst mean departure delay? Among
+      manufacturers whose planes flew at least 1,000 flights, return
+      manufacturer, flights and delay (the mean departure delay in minutes),
+      worst first.
+    hint: >-
+      Join only tailnum and manufacturer from planes; inner_join() drops
+      flights with an unknown plane, which have no manufacturer to report.
+      Then one summarise() with n() and mean(), a filter, and a sort.
+    solution: |
+      flights |>
+        inner_join(planes |> select(tailnum, manufacturer), join_by(tailnum)) |>
+        summarise(flights = n(), delay = mean(dep_delay, na.rm = TRUE), .by = manufacturer) |>
+        filter(flights >= 1000) |>
+        arrange(desc(delay))
