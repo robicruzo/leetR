@@ -90,6 +90,13 @@ export interface Module {
 	challenges: TrackChallenge[];
 }
 
+/** Size and columns of a dataset, recorded by the content check. */
+export interface DatasetInfo {
+	rows: number;
+	ncol: number;
+	cols: { name: string; type: string }[]; // runs like wk1 … wk76 are one entry
+}
+
 export interface Track {
 	id: string;
 	number: number;
@@ -98,6 +105,7 @@ export interface Track {
 	modules: Module[];
 	diagnostic: (Mcq & { id: string; module: string })[];
 	final: { questions: (Mcq & { id: string })[]; integrative: TrackChallenge };
+	datasets: Record<string, DatasetInfo>;
 	built: {
 		at: string;
 		r: string;

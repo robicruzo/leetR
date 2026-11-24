@@ -203,6 +203,34 @@ verify_mcq <- function(q, where, env = new_env()) {
   q
 }
 
+# ---------- datasets ----------
+# Size and columns of each dataset a challenge uses, so the app can show them
+# next to the prompt. Types are tibble's abbreviations (<dbl>, <fct>, ...).
+# A run of 4+ numbered columns with one type, like wk1 ... wk76, is one entry.
+dataset_info <- function(name) {
+  df <- run_code(name, new_env())
+  types <- unname(vapply(df, function(x) as.character(pillar::type_sum(x)), ""))
+  nms <- names(df)
+  shown <- ifelse(make.names(nms) == nms, nms, paste0("`", nms, "`"))
+  m <- regmatches(nms, regexec("^(.*?)([0-9]+)$", nms))
+  prefix <- vapply(m, function(x) if (length(x)) x[2] else NA_character_, "")
+  num <- suppressWarnings(as.numeric(vapply(m, function(x) if (length(x)) x[3] else NA_character_, "")))
+  cols <- list(); i <- 1
+  while (i <= length(nms)) {
+    j <- i
+    while (j < length(nms) && !is.na(num[i]) && identical(prefix[j + 1], prefix[i]) &&
+           identical(types[j + 1], types[i]) && isTRUE(num[j + 1] == num[j] + 1)) j <- j + 1
+    if (j - i + 1 >= 4) {
+      cols[[length(cols) + 1]] <- list(name = paste(shown[i], "…", shown[j]), type = types[[i]])
+      i <- j + 1
+    } else {
+      cols[[length(cols) + 1]] <- list(name = shown[i], type = types[[i]])
+      i <- i + 1
+    }
+  }
+  list(rows = nrow(df), ncol = ncol(df), cols = cols)
+}
+
 # ---------- assemble ----------
 track <- read_yaml(file.path(track_dir, "track.yml"))
 counts <- list(modules = 0, challenges = 0, probes = 0, anim_steps = 0, lines = 0)
@@ -235,6 +263,10 @@ track$diagnostic <- lapply(track$diagnostic, function(q) verify_mcq(q, paste0("d
 track$final$questions <- lapply(track$final$questions, function(q) verify_mcq(q, paste0("final/", q$id)))
 track$final$integrative <- check_challenge(c(track$final$integrative, list(type = "write", tier = "integrative", skill = "all")), "final")
 track$modules <- mods
+data_names <- unique(c(unlist(lapply(mods, function(m) vapply(m$challenges, `[[`, "", "data"))),
+                       track$final$integrative$data))
+track$datasets <- setNames(lapply(data_names, function(d) tryCatch(dataset_info(d), error = function(e) {
+  problem("dataset ", d, ": ", conditionMessage(e)); NULL })), data_names)
 pkgs <- c("dplyr", "tidyr", "ggplot2", "palmerpenguins")
 track$built <- list(at = format(Sys.time(), "%Y-%m-%d"), r = R.version.string,
                     runtime = if (in_webr) "webR" else "native R",

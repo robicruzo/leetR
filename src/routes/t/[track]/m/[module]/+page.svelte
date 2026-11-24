@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import DataColumns from '#lib/components/DataColumns.svelte';
 	import DataTable from '#lib/components/DataTable.svelte';
 	import Mcq from '#lib/components/Mcq.svelte';
 	import SkillMap from '#lib/components/SkillMap.svelte';
@@ -142,6 +143,7 @@
 				<p><b>{i + 1}.</b> {ch.prompt}</p>
 				{#each rules(ch) as r (r)}<p class="small">{r}</p>{/each}
 				{#if ch.type === 'predict'}
+					<DataColumns name={ch.data} info={track.datasets[ch.data]} />
 					<Mcq q={predictQ(ch)} onanswer={(first) => progress.predicted(key, ch, first)} />
 				{:else}
 					<a class="btn" href={resolve('/t/[track]/m/[module]/c/[challenge]', { track: track.id, module: m.id, challenge: ch.id })}>

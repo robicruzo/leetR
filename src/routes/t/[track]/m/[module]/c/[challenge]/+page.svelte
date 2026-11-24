@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import DataColumns from '#lib/components/DataColumns.svelte';
 	import Editor from '#lib/components/Editor.svelte';
 	import OutputPanel from '#lib/components/OutputPanel.svelte';
 	import { engine, type GradeResult, type RunResult } from '#lib/r/engine.svelte.ts';
@@ -128,6 +129,7 @@
 					<span class="tier">data: {ch.data}</span>
 				</div>
 				<p class="prompt">{ch.prompt}</p>
+				<DataColumns name={ch.data} info={track.datasets[ch.data]} />
 				{#each rules as [label, toks] (label)}
 					<p class="small">{label}: {#each toks as t (t)}<code>{t}</code> {/each}</p>
 				{/each}
@@ -167,7 +169,7 @@
 
 	<section class="right">
 		<div class="toolbar">
-			<span class="muted small">R · <kbd>⌘↵</kbd> run · <kbd>⌘⇧↵</kbd> submit</span>
+			<span class="muted small">R · <kbd>⌘↵</kbd> run · <kbd>⌘⇧↵</kbd> submit · <kbd>⌘E</kbd> |&gt;</span>
 			<div class="actions">
 				<button onclick={reset} title="Reset to the starting code">Reset</button>
 				<button

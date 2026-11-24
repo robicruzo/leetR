@@ -7,6 +7,7 @@
 	import { tags as t } from '@lezer/highlight';
 	import { indentWithTab } from '@codemirror/commands';
 	import { r } from '@codemirror/legacy-modes/mode/r';
+	import { insertPipe, pipeIndent } from '#lib/r/pipeIndent.ts';
 
 	interface Props {
 		value: string;
@@ -58,6 +59,7 @@
 				extensions: [
 					basicSetup,
 					StreamLanguage.define(r),
+					pipeIndent,
 					syntaxHighlighting(highlight),
 					indentUnit.of('  '),
 					EditorState.tabSize.of(2),
@@ -65,7 +67,9 @@
 					Prec.highest(
 						keymap.of([
 							{ key: 'Mod-Enter', run: () => (onrun?.(), true) },
-							{ key: 'Mod-Shift-Enter', run: () => (onsubmit?.(), true) }
+							{ key: 'Mod-Shift-Enter', run: () => (onsubmit?.(), true) },
+							// ⌘E / Ctrl-E: insert the pipe (browsers leave it free in a page).
+							{ key: 'Mod-e', run: insertPipe, preventDefault: true }
 						])
 					),
 					keymap.of([indentWithTab]),

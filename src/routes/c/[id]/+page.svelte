@@ -118,7 +118,7 @@
 
 	<section class="right">
 		<div class="toolbar">
-			<span class="muted small">R · <kbd>⌘↵</kbd> run · <kbd>⌘⇧↵</kbd> submit</span>
+			<span class="muted small">R · <kbd>⌘↵</kbd> run · <kbd>⌘⇧↵</kbd> submit · <kbd>⌘E</kbd> |&gt;</span>
 			<div class="actions">
 				<button onclick={reset} title="Reset to starter code">Reset</button>
 				<button onclick={() => engine.restart()} disabled={engine.status === 'restarting' || engine.status === 'booting'} title="Kill and restart the R session">
