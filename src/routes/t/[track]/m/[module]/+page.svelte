@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import DataColumns from '#lib/components/DataColumns.svelte';
 	import DataTable from '#lib/components/DataTable.svelte';
@@ -7,7 +7,7 @@
 	import SkillMap from '#lib/components/SkillMap.svelte';
 	import TableMorph from '#lib/components/TableMorph.svelte';
 	import TrackNav from '#lib/components/TrackNav.svelte';
-	import { progressFor } from '#lib/progress.svelte.ts';
+	import { progressFor, type AnswerState } from '#lib/progress.svelte.ts';
 	import { challengeKey, shortTitle, type Mcq as McqT, type Option, type TrackChallenge } from '#lib/tracks.ts';
 	import type { PageProps } from './$types';
 
@@ -22,17 +22,32 @@
 	const next = $derived(idx < track.modules.length - 1 ? track.modules[idx + 1] : null);
 	const answer = $derived(m.predict.options.find((o) => o.correct)!.choice);
 
+	// Answers are saved per question, so a revisit shows what you chose.
+	// Only a question's first answer changes levels and reviews.
+	const keyOf = (part: string) => `${track.id}/${m.id}/${part}`;
+	const predictKey = $derived(keyOf('predict'));
+	const probeKey = (i: number) => keyOf(`probe:${m.probes[i].id}`);
+	const saved = (key: string) => progress.state.answers[key] ?? null;
+	const store = (key: string) => (state: AnswerState) => progress.saveAnswer(key, state);
+
 	// 1 Predict: the animation stays locked until the learner commits.
 	let picked = $state<Option | null>(null);
 	let watched = $state(false);
 	let probe1Done = $state(false);
+	let replay = $state(0); // remounts the animation after a reset
 
-	// SvelteKit reuses this component when moving between modules: start fresh.
-	$effect.pre(() => {
+	// On load, and when moving to another module (SvelteKit reuses this
+	// component), restore the saved prediction or start fresh.
+	$effect(() => {
+		const ready = progress.loaded;
 		void m.id;
-		picked = null;
-		watched = false;
-		probe1Done = false;
+		untrack(() => {
+			const s = ready ? saved(predictKey) : null;
+			const i = s ? Number(Object.keys(s.marks).find((k) => s.marks[Number(k)] === 'picked')) : NaN;
+			picked = Number.isNaN(i) ? null : m.predict.options[i];
+			watched = !!s?.watched;
+			probe1Done = !!(ready && m.probes[0] && saved(probeKey(0))?.done);
+		});
 	});
 
 	const predictNote = $derived.by(() => {
@@ -56,22 +71,34 @@
 		progress.raise(m.predict.skill, 1);
 	}
 
+	function resetPredict() {
+		progress.clearAnswer(predictKey);
+		picked = null;
+		watched = false;
+		replay++;
+	}
+
 	// 2 Watch: each step raises its subskill to 1; the last step settles the prediction.
 	function onStep(i: number) {
 		if (!picked) return;
 		progress.raise(m.anim[i].skill, 1);
 		if (i === m.anim.length - 1 && !watched) {
 			watched = true;
-			if (picked.correct) progress.raise(m.predict.skill, 2);
-			progress.schedule({ id: `pred:${m.id}`, kind: 'predict', module: m.id, skill: m.predict.skill }, !!picked.correct);
+			progress.patchAnswer(predictKey, { watched: true });
+			if (progress.countOnce(predictKey)) {
+				if (picked.correct) progress.raise(m.predict.skill, 2);
+				progress.schedule({ id: `pred:${m.id}`, kind: 'predict', module: m.id, skill: m.predict.skill }, !!picked.correct);
+			}
 		}
 	}
 
 	// 3 Probe
 	function onProbe(i: number, firstTry: boolean) {
 		const p = m.probes[i];
-		progress.raise(p.skill, firstTry ? 2 : 1);
-		progress.schedule({ id: `probe:${p.id}`, kind: 'probe', module: m.id, skill: p.skill }, firstTry);
+		if (progress.countOnce(probeKey(i))) {
+			progress.raise(p.skill, firstTry ? 2 : 1);
+			progress.schedule({ id: `probe:${p.id}`, kind: 'probe', module: m.id, skill: p.skill }, firstTry);
+		}
 		if (i === 0) probe1Done = true;
 	}
 
@@ -108,18 +135,41 @@
 	<section class="card">
 		<h2>1 · Predict</h2>
 		{#if m.predict.data_table}<DataTable table={m.predict.data_table} />{/if}
-		<Mcq q={m.predict} once onanswer={onPredict} note={predictNote} />
+		{#if progress.loaded}
+			{#key replay}
+				<Mcq
+					q={m.predict}
+					once
+					onanswer={onPredict}
+					note={predictNote}
+					saved={saved(predictKey)}
+					onstate={store(predictKey)}
+					onreset={resetPredict}
+					counted={progress.isCounted(predictKey)}
+				/>
+			{/key}
+		{/if}
 	</section>
 
-	<TableMorph steps={m.anim} locked={!picked} onstep={onStep} />
+	{#key replay}
+		<TableMorph steps={m.anim} locked={!picked} onstep={onStep} />
+	{/key}
 
 	{#if watched}
 		<section class="card">
 			<h2>3 · Probe</h2>
-			<Mcq q={m.probes[0]} onanswer={(first) => onProbe(0, first)} />
-			{#if probe1Done && m.probes[1]}
-				<div class="gap"><Mcq q={m.probes[1]} onanswer={(first) => onProbe(1, first)} /></div>
-			{/if}
+			{#each m.probes.slice(0, probe1Done ? 2 : 1) as p, i (p.id)}
+				<div class:gap={i > 0}>
+					<Mcq
+						q={p}
+						onanswer={(first) => onProbe(i, first)}
+						saved={saved(probeKey(i))}
+						onstate={store(probeKey(i))}
+						onreset={() => progress.clearAnswer(probeKey(i))}
+						counted={progress.isCounted(probeKey(i))}
+					/>
+				</div>
+			{/each}
 		</section>
 	{/if}
 
@@ -133,7 +183,7 @@
 		{#each m.challenges as ch, i (ch.id)}
 			{@const key = challengeKey(track, m, ch)}
 			{@const st = progress.state.status[key]}
-			<div class="ch">
+			<div class="ch" id="ch-{ch.id}">
 				<div class="meta">
 					<span class="tier {ch.tier}">{ch.tier}</span>
 					<span class="tier">{ch.type}</span>
@@ -144,7 +194,17 @@
 				{#each rules(ch) as r (r)}<p class="small">{r}</p>{/each}
 				{#if ch.type === 'predict'}
 					{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
-					<Mcq q={predictQ(ch)} onanswer={(first) => progress.predicted(key, ch, first)} />
+					{#if progress.loaded}
+						{@const akey = `${key}#answer`}
+						<Mcq
+							q={predictQ(ch)}
+							onanswer={(first) => progress.countOnce(akey) && progress.predicted(key, ch, first)}
+							saved={saved(akey)}
+							onstate={store(akey)}
+							onreset={() => progress.clearAnswer(akey)}
+							counted={progress.isCounted(akey)}
+						/>
+					{/if}
 				{:else}
 					<a class="btn" href={resolve('/t/[track]/m/[module]/c/[challenge]', { track: track.id, module: m.id, challenge: ch.id })}>
 						{st ? 'Open again' : 'Solve it'} →

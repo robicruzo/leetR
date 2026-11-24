@@ -30,6 +30,15 @@ export interface ReviewItem {
 
 export type ChallengeStatus = 'clean' | 'hinted' | 'seen';
 
+/** What a multiple-choice question looks like after answering, so it can be restored. */
+export interface AnswerState {
+	marks: Record<number, 'right' | 'wrong' | 'picked'>;
+	misses: number;
+	done: boolean;
+	own: { tone: 'ok' | 'bad' | 'plain'; lead?: string; text: string } | null;
+	watched?: boolean; // the prediction's animation was played to the end
+}
+
 export interface ProgressState {
 	levels: Record<string, number>;
 	cleanSolves: Record<string, { day: number; review: boolean }[]>;
@@ -38,6 +47,8 @@ export interface ProgressState {
 	opened: Record<string, { hint?: number; solution?: number }>; // day each was opened
 	offset: number; // preview control: days added to the clock
 	placement: string | null; // suggested starting module
+	answers: Record<string, AnswerState>; // saved question state, by question key
+	counted: Record<string, true>; // questions whose first answer already counted
 }
 
 const empty = (): ProgressState => ({
@@ -47,7 +58,9 @@ const empty = (): ProgressState => ({
 	status: {},
 	opened: {},
 	offset: 0,
-	placement: null
+	placement: null,
+	answers: {},
+	counted: {}
 });
 
 const rank: Record<ChallengeStatus, number> = { seen: 0, hinted: 1, clean: 2 };
@@ -205,6 +218,39 @@ export class TrackProgress {
 		this.#setStatus(key, firstTry ? 'clean' : 'hinted');
 		this.raise(ch.skill, firstTry ? 2 : 1);
 		this.#save();
+	}
+
+	// ---- saved answers ------------------------------------------------------
+	// Only a question's first answer changes levels and reviews. After "Reset
+	// answer" the learner can try again, but that is practice.
+
+	saveAnswer(key: string, state: AnswerState) {
+		this.state.answers[key] = state;
+		this.#save();
+	}
+
+	patchAnswer(key: string, patch: Partial<AnswerState>) {
+		const prev = this.state.answers[key];
+		if (!prev) return;
+		this.state.answers[key] = { ...prev, ...patch };
+		this.#save();
+	}
+
+	clearAnswer(key: string) {
+		delete this.state.answers[key];
+		this.#save();
+	}
+
+	isCounted(key: string): boolean {
+		return !!this.state.counted[key];
+	}
+
+	/** Returns true the first time, so callers apply levels and reviews once. */
+	countOnce(key: string): boolean {
+		if (this.state.counted[key]) return false;
+		this.state.counted[key] = true;
+		this.#save();
+		return true;
 	}
 
 	// ---- placement and preview control -----------------------------------
