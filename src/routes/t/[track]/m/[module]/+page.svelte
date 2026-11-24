@@ -8,7 +8,7 @@
 	import TableMorph from '#lib/components/TableMorph.svelte';
 	import TrackNav from '#lib/components/TrackNav.svelte';
 	import { progressFor, type AnswerState } from '#lib/progress.svelte.ts';
-	import { challengeKey, shortTitle, type Mcq as McqT, type Option, type TrackChallenge } from '#lib/tracks.ts';
+	import { answerKey, challengeKey, predictQuestion, shortTitle, type Option, type TrackChallenge } from '#lib/tracks.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -102,20 +102,8 @@
 		if (i === 0) probe1Done = true;
 	}
 
-	// 4 Do: predict-type challenges are answered here; the rest open the editor.
-	const predictQ = (ch: TrackChallenge): McqT => ({
-		skill: ch.skill ?? '',
-		ask: '',
-		code: ch.code,
-		explain: ch.explain,
-		right_followup: ch.explain,
-		options: (ch.options ?? []).map((o) => ({
-			choice: o,
-			correct: o === ch.answer,
-			probe: 'Run it in your head once more, row by row.'
-		}))
-	});
-
+	// 4 Do: predict-type challenges can be answered here or on their own page;
+	// both save under the same answer key.
 	const statusLabel = { clean: 'Solved cleanly', hinted: 'Solved with help', seen: 'Solution seen' };
 	const rules = (ch: TrackChallenge) =>
 		[
@@ -195,9 +183,9 @@
 				{#if ch.type === 'predict'}
 					{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
 					{#if progress.loaded}
-						{@const akey = `${key}#answer`}
+						{@const akey = answerKey(track, m, ch)}
 						<Mcq
-							q={predictQ(ch)}
+							q={predictQuestion(ch)}
 							onanswer={(first) => progress.countOnce(akey) && progress.predicted(key, ch, first)}
 							saved={saved(akey)}
 							onstate={store(akey)}

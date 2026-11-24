@@ -159,3 +159,22 @@ export function snippetOptions(ch: TrackChallenge): SnippetOptions {
 export function starterCode(ch: TrackChallenge) {
 	return ch.type === 'fix' && ch.starter ? ch.starter : `${ch.data} |>\n  `;
 }
+
+/** Key under which a predict-type challenge's answer is saved (lesson page and workspace share it). */
+export const answerKey = (track: Track, mod: Module | null, ch: TrackChallenge) => `${challengeKey(track, mod, ch)}#answer`;
+
+/** A predict-type challenge as a multiple-choice question. */
+export function predictQuestion(ch: TrackChallenge): Mcq {
+	return {
+		skill: ch.skill ?? '',
+		ask: '',
+		code: ch.code,
+		explain: ch.explain,
+		right_followup: ch.explain,
+		options: (ch.options ?? []).map((o) => ({
+			choice: o,
+			correct: o === ch.answer,
+			probe: 'Run it in your head once more, row by row.'
+		}))
+	};
+}

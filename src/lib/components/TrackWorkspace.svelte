@@ -7,12 +7,15 @@
 	import { resolve } from '$app/paths';
 	import DataColumns from '#lib/components/DataColumns.svelte';
 	import Editor from '#lib/components/Editor.svelte';
+	import Mcq from '#lib/components/Mcq.svelte';
 	import OutputPanel from '#lib/components/OutputPanel.svelte';
 	import { engine, type GradeResult, type RunResult } from '#lib/r/engine.svelte.ts';
 	import { clearDraft, getDraft, recordAttempt, saveDraft } from '#lib/db.ts';
 	import { progressFor, type ChallengeStatus } from '#lib/progress.svelte.ts';
 	import {
+		answerKey,
 		challengeKey,
+		predictQuestion,
 		shortTitle,
 		snippetOptions,
 		starterCode,
@@ -48,6 +51,11 @@
 	const solutionOpen = $derived(progress.loaded && progress.openedToday(key, 'solution'));
 	const status = $derived(progress.state.status[key]);
 
+	// Predict mode: answer first, then the code opens for running and editing.
+	const isPredict = $derived(ch.type === 'predict');
+	const akey = $derived(answerKey(track, mod, ch));
+	const answered = $derived(!!progress.state.answers[akey]?.done);
+
 	let saveTimer: ReturnType<typeof setTimeout>;
 	function onchange(next: string) {
 		code = next;
@@ -59,8 +67,8 @@
 		// Read here, not in load(): prerendered pages have no query string.
 		reviewId = new URLSearchParams(location.search).get('review') ?? undefined;
 		await progress.load();
-		const draft = await getDraft(key);
-		code = draft?.code ?? starterCode(ch);
+		const draft = isPredict ? undefined : await getDraft(key);
+		code = draft?.code ?? (isPredict ? (ch.code ?? '') : starterCode(ch));
 		loaded = true;
 	});
 
@@ -81,6 +89,11 @@
 	}
 
 	async function reset() {
+		if (isPredict) {
+			code = ch.code ?? '';
+			editor?.setValue(code);
+			return;
+		}
 		if (!confirm('Replace your code with the starting code?')) return;
 		await clearDraft(key);
 		code = starterCode(ch);
@@ -101,12 +114,8 @@
 	}
 
 	// Every challenge of the module, for the strip and previous/next links.
-	// Predict-type ones are answered on the lesson page, so they link there.
-	const lessonHref = $derived(mod ? resolve('/t/[track]/m/[module]', { track: track.id, module: mod.id }) : '');
 	const hrefOf = (c: TrackChallenge) =>
-		c.type === 'predict'
-			? `${lessonHref}#ch-${c.id}`
-			: resolve('/t/[track]/m/[module]/c/[challenge]', { track: track.id, module: mod!.id, challenge: c.id });
+		resolve('/t/[track]/m/[module]/c/[challenge]', { track: track.id, module: mod!.id, challenge: c.id });
 	const strip = $derived(
 		mod
 			? mod.challenges.map((c, i) => ({
@@ -147,7 +156,7 @@
 						class="num {s.status ?? ''}"
 						class:current={s.c.id === ch.id}
 						aria-current={s.c.id === ch.id ? 'page' : undefined}
-						title="{s.n}. {s.c.tier}{s.c.type === 'predict' ? ' · predict (on the lesson page)' : ''}{s.status
+						title="{s.n}. {s.c.tier}{s.c.type === 'predict' ? ' · predict' : ''}{s.status
 							? ` · ${s.status === 'clean' ? 'solved cleanly' : s.status === 'hinted' ? 'solved with help' : 'solution seen'}`
 							: ''}">{s.n}</a
 					>
@@ -159,8 +168,10 @@
 		{/if}
 		<nav class="tabs">
 			<button class:active={tab === 'description'} onclick={() => (tab = 'description')}>Description</button>
-			<button class:active={tab === 'hint'} onclick={() => (tab = 'hint')}>Hint</button>
-			<button class:active={tab === 'solution'} onclick={() => (tab = 'solution')}>Solution</button>
+			{#if !isPredict}
+				<button class:active={tab === 'hint'} onclick={() => (tab = 'hint')}>Hint</button>
+				<button class:active={tab === 'solution'} onclick={() => (tab = 'solution')}>Solution</button>
+			{/if}
 		</nav>
 
 		<div class="content">
@@ -178,6 +189,19 @@
 				</div>
 				<p class="prompt">{ch.prompt}</p>
 				{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
+				{#if isPredict}
+					<p class="small">Predict first. Once you answer, the code on the right opens: run it to check, or change it and see what happens.</p>
+					{#if progress.loaded}
+						<Mcq
+							q={{ ...predictQuestion(ch), code: null }}
+							onanswer={(first) => progress.countOnce(akey) && progress.predicted(key, ch, first)}
+							saved={progress.state.answers[akey] ?? null}
+							onstate={(st) => progress.saveAnswer(akey, st)}
+							onreset={() => progress.clearAnswer(akey)}
+							counted={progress.isCounted(akey)}
+						/>
+					{/if}
+				{:else}
 				{#each rules as [label, toks] (label)}
 					<p class="small">{label}: {#each toks as t (t)}<code>{t}</code> {/each}</p>
 				{/each}
@@ -198,6 +222,7 @@
 					Your code's last value is the answer. It runs on <code>{ch.data}</code>; Submit also re-runs it on half of
 					<code>{ch.data}</code>, so the answer has to be computed, not typed in.
 				</p>
+				{/if}
 			{:else if tab === 'hint'}
 				{#if hintOpen || solutionOpen}
 					<p>{ch.hint ?? 'This one has no hint.'}</p>
@@ -219,20 +244,28 @@
 		<div class="toolbar">
 			<span class="muted small">R · <kbd>⌘↵</kbd> run · <kbd>⌘⇧↵</kbd> submit · <kbd>⌘E</kbd> |&gt;</span>
 			<div class="actions">
-				<button onclick={reset} title="Reset to the starting code">Reset</button>
+				{#if !isPredict || answered}
+					<button onclick={reset} title="Reset to the starting code">Reset</button>
+				{/if}
 				<button
 					onclick={() => engine.restart()}
 					disabled={engine.status === 'restarting' || engine.status === 'booting'}
 					title="Kill and restart the R session">Restart R</button
 				>
-				<button onclick={run} disabled={!engineUp || working}>Run</button>
-				<button class="primary" onclick={submit} disabled={!engineUp || working}>Submit</button>
+				{#if isPredict}
+					<button class="primary" onclick={run} disabled={!engineUp || working || !answered} title={answered ? 'Run the code' : 'Answer the question first'}>Run</button>
+				{:else}
+					<button onclick={run} disabled={!engineUp || working}>Run</button>
+					<button class="primary" onclick={submit} disabled={!engineUp || working}>Submit</button>
+				{/if}
 			</div>
 		</div>
 
 		<div class="editor">
-			{#if loaded}
-				<Editor bind:this={editor} value={code} {onchange} onrun={run} onsubmit={submit} />
+			{#if loaded && isPredict && !answered}
+				<pre class="locked">{code}</pre>
+			{:else if loaded}
+				<Editor bind:this={editor} value={code} {onchange} onrun={run} onsubmit={isPredict ? run : submit} />
 			{/if}
 		</div>
 
@@ -248,7 +281,9 @@
 				{runResult}
 				{grade}
 				runEmpty="Run your code to see its result here."
-				gradeEmpty="Submit to compare your result with the reference, on the full data and on a sample of it."
+				gradeEmpty={isPredict
+					? 'A predict challenge is checked by your answer on the left, not by Submit.'
+					: 'Submit to compare your result with the reference, on the full data and on a sample of it.'}
 				gradingText="Grading: comparing with the reference, then re-running on a sample of the data…"
 			/>
 		</div>
@@ -272,6 +307,14 @@
 		display: grid;
 		grid-template-rows: auto 1fr minmax(200px, 40%);
 		min-height: 0;
+	}
+	.locked {
+		margin: 0;
+		height: 100%;
+		border-radius: 0;
+		padding: 0.6rem 1rem;
+		font-size: 14px;
+		color: var(--muted);
 	}
 	.strip {
 		display: flex;
