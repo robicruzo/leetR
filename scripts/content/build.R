@@ -18,6 +18,8 @@ source(file.path(dirname(track_dir), "setup.R"))
 options(width = 72, pillar.width = 72, tibble.print_min = 5, tibble.print_max = 5, cli.num_colors = 1)
 
 fmt <- function(v) {
+  # A list-column cell prints like tibble does: <int [2]>
+  if (is.list(v)) return(vapply(v, function(x) sprintf("<%s [%d]>", vctrs::vec_ptype_abbr(x), length(x)), ""))
   if (is.logical(v)) return(ifelse(is.na(v), "NA", ifelse(v, "TRUE", "FALSE")))
   if (is.numeric(v)) return(vapply(v, function(x) if (is.na(x)) "NA" else format(x, digits = 4, trim = TRUE), ""))
   v <- as.character(v); ifelse(is.na(v), "NA", v)
@@ -31,30 +33,79 @@ run_code <- function(code, env) suppressMessages(eval(parse(text = code), envir 
 new_env <- function() { e <- new.env(parent = globalenv()); e$penguins_sample <- penguins_sample; e }
 
 # ---------- animations ----------
+# Every animation table carries a hidden `.id` column: the row's tile key.
+# A tile is "<row key>|<column id>", so the player can move the same tile
+# from one step to the next. Steps that change the rows say how:
+#   merge: {by, pour}      rows collapse into groups (summarise, count)
+#   split: {names, values} one row becomes several (pivot_longer); each value
+#                          tile travels from its wide cell to its long row
+#   widen: {names, values} several rows become one (pivot_wider); each new
+#                          cell takes the one tile it came from
+# Rows a step adds with no source (e.g. complete()) get new keys and fade in.
 build_anim <- function(a, mod_id) {
   env <- new_env()
   data0 <- run_code(a$data, env)
-  if (!".id" %in% names(data0)) data0$.id <- penguins_sample$.id[seq_len(nrow(data0))]
+  if (!".id" %in% names(data0)) {
+    data0$.id <- if (nrow(data0) <= nrow(penguins_sample)) penguins_sample$.id[seq_len(nrow(data0))] else as.character(seq_len(nrow(data0)))
+  }
   data0 <- relocate(data0, .id)
   prev <- data0; colid <- setNames(as.list(names(data0)), names(data0))
   steps <- list()
   for (i in seq_along(a$steps)) {
     s <- a$steps[[i]]
+    where <- paste0(mod_id, " anim step ", i)
     base <- if (isTRUE(s$from_data)) data0 else prev
     if (isTRUE(s$from_data)) colid <- setNames(as.list(names(data0)), names(data0))
-    env$.base <- base
+    widen <- s$widen; split <- s$split
+    # pivot_wider() must not see the row keys, or no two rows could combine.
+    env$.base <- if (!is.null(widen)) select(base, -.id) else base
     cur <- if (is.null(s$code) || s$code == "") base else
-      tryCatch(run_code(paste0(".base |> ", s$code), env), error = function(e) { problem(mod_id, " anim step ", i, ": ", conditionMessage(e)); base })
+      tryCatch(run_code(paste0(".base |> ", s$code), env), error = function(e) { problem(where, ": ", conditionMessage(e)); base })
     merge <- s$merge
-    from <- NULL
+    from <- NULL; src <- NULL; by_cols <- NULL
+    colid_of <- function(nm) if (!is.null(colid[[nm]])) colid[[nm]] else nm
     if (!is.null(merge)) {
       by <- unlist(merge$by)
       key_of <- function(df) if (length(by)) do.call(paste, c(lapply(by, function(b) fmt(df[[b]])), sep = "|")) else rep("all", nrow(df))
       src_keys <- key_of(base); out_keys <- key_of(cur)
       cur$.id <- paste0("g:", out_keys)
       from <- lapply(out_keys, function(k) base$.id[src_keys == k])
+      by_cols <- as.character(by)
+    } else if (!is.null(split)) {
+      nm_col <- split$names; val_col <- split$values; prefix <- if (is.null(split$prefix)) "" else split$prefix
+      if (!all(c(".id", nm_col, val_col) %in% names(cur))) {
+        problem(where, ": split needs the result to keep .id and have columns ", nm_col, " and ", val_col)
+      } else {
+        orig <- cur$.id
+        src_col <- paste0(prefix, fmt(cur[[nm_col]]))
+        src <- lapply(seq_len(nrow(cur)), function(r) vapply(setdiff(names(cur), ".id"), function(nm) {
+          if (nm == val_col) paste0(orig[r], "|", colid_of(src_col[r]))
+          else if (nm == nm_col || !nm %in% names(base)) NA_character_
+          else paste0(orig[r], "|", colid_of(nm))
+        }, ""))
+        cur$.id <- paste0(orig, ":", fmt(cur[[nm_col]]))
+      }
+    } else if (!is.null(widen)) {
+      nm_col <- widen$names; val_col <- widen$values; prefix <- if (is.null(widen$prefix)) "" else widen$prefix
+      by_cols <- intersect(setdiff(names(cur), ".id"), names(base))
+      key_of <- function(df) if (length(by_cols)) do.call(paste, c(lapply(by_cols, function(b) fmt(df[[b]])), sep = "|")) else rep("all", nrow(df))
+      src_keys <- key_of(base); out_keys <- key_of(cur)
+      from <- lapply(out_keys, function(k) base$.id[src_keys == k])
+      base_name <- paste0(prefix, fmt(base[[nm_col]]))
+      src <- lapply(seq_len(nrow(cur)), function(r) vapply(names(cur), function(nm) {
+        if (nm %in% by_cols) return(NA_character_)
+        hit <- which(src_keys == out_keys[r] & base_name == nm)
+        if (length(hit)) paste0(base$.id[hit[1]], "|", colid_of(val_col)) else NA_character_
+      }, ""))
+      cur$.id <- paste0("w:", out_keys)
+      cur <- relocate(cur, .id)
     } else if (!".id" %in% names(cur)) {
-      if (nrow(cur) == nrow(base)) cur$.id <- base$.id else problem(mod_id, " anim step ", i, ": rows changed without a merge")
+      if (nrow(cur) == nrow(base)) cur$.id <- base$.id else problem(where, ": rows changed without a merge, split or widen")
+    }
+    if (".id" %in% names(cur)) {
+      new_rows <- which(is.na(cur$.id))
+      cur$.id[new_rows] <- paste0("+", new_rows) # rows with no source, e.g. from complete()
+      if (anyDuplicated(cur$.id)) problem(where, ": several rows share a key; declare split: {names, values}")
     }
     # column identities survive renames
     rn <- s$renames
@@ -65,6 +116,7 @@ build_anim <- function(a, mod_id) {
       row <- list(k = cur$.id[r], v = I(unname(vapply(vis, function(nm) fmt(cur[[nm]][r]), ""))))
       if (!is.null(s$tint)) row$t <- fmt(cur[[s$tint]][r])
       if (!is.null(from)) row$from <- I(from[[r]])
+      if (!is.null(src)) row$src <- I(unname(src[[r]][vis]))
       row
     })
     if (isTRUE(s$bands) && !is.null(s$tint)) {
@@ -77,7 +129,7 @@ build_anim <- function(a, mod_id) {
       cols = I(vis), ids = I(unname(vapply(vis, function(nm) colid[[nm]], ""))),
       rows = rows, bands = isTRUE(s$bands), tint = !is.null(s$tint),
       pour = if (!is.null(merge$pour)) merge$pour else NULL,
-      by = if (!is.null(merge)) AI(as.character(unlist(merge$by))) else NULL, merged = !is.null(merge),
+      by = AI(by_cols), merged = !is.null(merge) || !is.null(widen),
       hl = if (!is.null(s$hl)) AI(unlist(s$hl)) else NULL,
       late = if (!is.null(s$late)) AI(unlist(s$late)) else NULL,
       skill = s$skill
@@ -189,7 +241,10 @@ track$built <- list(at = format(Sys.time(), "%Y-%m-%d"), r = R.version.string,
                     dplyr = as.character(packageVersion("dplyr")),
                     packages = as.list(setNames(vapply(pkgs, function(p) as.character(packageVersion(p)), ""), pkgs)),
                     counts = counts)
-write(toJSON(track, auto_unbox = TRUE, null = "null", na = "null"), out_file)
+# Write to a temporary file, then rename: a running dev server must never
+# read a half-written file.
+write(toJSON(track, auto_unbox = TRUE, null = "null", na = "null"), paste0(out_file, ".tmp"))
+file.rename(paste0(out_file, ".tmp"), out_file)
 say(sprintf("Built %d modules, %d challenges, %d probes, %d animation steps from %d lines of YAML.",
                 counts$modules, counts$challenges, counts$probes, counts$anim_steps, counts$lines))
 if (length(problems)) {

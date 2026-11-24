@@ -1,0 +1,78 @@
+id: 03-pivot-wider
+title: "pivot_wider(): values become column names"
+key_idea: >-
+  pivot_wider() is the reverse of pivot_longer(): the values of one column
+  become new column names and another column's values fill the cells.
+  The rows are decided by every column you did not pivot. A combination
+  with no row becomes NA, and a combination with two rows does not fit in
+  one cell.
+subskills:
+  - {id: pw-shape, name: "One row per combination of the id columns"}
+  - {id: pw-ids, name: "Every unpivoted column is an id"}
+  - {id: pw-fill, name: "Missing combinations become NA; values_fill"}
+  - {id: pw-dup, name: "Duplicates make list-columns; summarise first"}
+readings:
+  - {label: "r4ds 5.4, Widening data", url: "https://r4ds.hadley.nz/data-tidy.html#widening-data"}
+  - {label: "MDSR 6.2.3, pivot_wider()", url: "https://mdsr-book.github.io/mdsr3e/06-dataII.html"}
+  - {label: "STAT 7500 primer ch. 8 (pivot_wider)", url: ""}
+
+predict:
+  skill: pw-shape
+  code: |
+    table2 |>
+      pivot_wider(names_from = type, values_from = count)
+  ask: "table2 is 12 rows × 4 columns: country, year, type (cases or population) and count. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "6 × 4", correct: true}
+    - choice: "12 × 4"
+      misconception: wider-keeps-rows
+      probe: "Afghanistan 1999 has two rows in table2, one per type. After widening, what would its second row hold?"
+    - choice: "6 × 5"
+      misconception: names-col-stays
+      probe: "The values of type became the column names cases and population. Is there still a type column?"
+    - choice: "3 × 4"
+      misconception: ids-only-first-col
+      probe: "Which columns are not type or count? Both of them pick out a row."
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-dup
+    skill: pw-dup
+    ask: "What does table2 |> select(-year) |> pivot_wider(names_from = type, values_from = count) do?"
+    options:
+      - {choice: "Warns, and returns list-columns holding two numbers per cell", correct: true}
+      - choice: "Stops with an error: the values are not unique"
+        misconception: dup-errors
+        probe: "tidyr can still build the table. What could a cell hold if two numbers belong in it?"
+      - choice: "Returns 3 rows with the two years added up"
+        misconception: dup-sums
+        probe: "Did anything in the call say to add? Where would pivot_wider() learn to sum?"
+      - choice: "Returns 6 rows, the same as with year"
+        misconception: year-still-there
+        probe: "Without year, which column tells Afghanistan 1999 apart from Afghanistan 2000?"
+    right_followup: "Are you sure? How would you get the totals across both years instead?"
+    explain: >-
+      Without year, the only id left is country, so each country has two
+      cases values for one cell. pivot_wider() keeps both in a list-column
+      and warns. Summarise first (or use values_fn = sum) so each cell gets
+      exactly one value.
+    verify: 'is.list(suppressWarnings(table2 |> dplyr::select(-year) |> tidyr::pivot_wider(names_from = type, values_from = count))$cases)'
+  - id: p-fill
+    skill: pw-fill
+    ask: "fish_encounters has a row only where a tagged fish was seen at a station (seen = 1). After pivot_wider(names_from = station, values_from = seen), what is in the cell of a station where the fish was not seen?"
+    options:
+      - {choice: "NA", correct: true}
+      - choice: "0"
+        misconception: missing-is-zero
+        probe: "Was a 0 ever recorded in the data? Where would pivot_wider() get it from?"
+      - choice: "FALSE"
+        misconception: missing-is-false
+        probe: "seen is a number. Would tidyr switch the cell to a logical just for missing rows?"
+    right_followup: "Are you sure? How would you put 0 there, and when would that be wrong?"
+    explain: >-
+      A combination with no row becomes NA: pivot_wider() makes the implicit
+      missing value explicit. values_fill = 0 fills it, which is right here
+      because no row means the fish was not seen. It would be wrong for
+      something like cases, where no row means "not recorded".
+    verify: 'anyNA(fish_encounters |> tidyr::pivot_wider(names_from = station, values_from = seen))'

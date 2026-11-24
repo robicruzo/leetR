@@ -1,0 +1,25 @@
+data: stocks
+steps:
+  - code: ""
+    show: stocks
+    tint: year
+    caption: "Seven quarterly prices. 2020 Q4 is NA, and 2021 Q1 is not there at all."
+  - code: 'complete(year, qtr)'
+    tint: year
+    caption: "complete() lists every year and quarter combination. The absent 2021 Q1 appears as a new row with an NA price: implicit missing became explicit."
+    skill: mi-complete
+  - code: 'fill(price)'
+    tint: year
+    caption: "fill() copies the last known price down into each NA. 2021 Q1 gets 2020's 0.35, because fill() does not know where a year ends."
+    skill: mi-fill
+  - from_data: true
+    code: 'drop_na(price)'
+    tint: year
+    caption: "drop_na() goes the other way: it removes the row with the explicit NA. Now both missing quarters are implicit."
+    skill: mi-drop
+  - from_data: true
+    code: 'pivot_wider(names_from = qtr, values_from = price)'
+    widen: {names: qtr, values: price}
+    tint: year
+    caption: "Widening also makes implicit missing values explicit: 2021 has no Q1 row, so its `1` cell is NA, next to 2020's NA in `4`."
+    skill: mi-explicit

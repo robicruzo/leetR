@@ -27,7 +27,10 @@
 
 	const PAD = 10;
 	const ROW_H = 36;
-	const TINT: Record<string, string> = { Adelie: 'adelie', Chinstrap: 'chinstrap', Gentoo: 'gentoo' };
+	// Penguin species keep their palmerpenguins colours; any other tint values
+	// (countries, say) take the same colours in order of first appearance.
+	const SPECIES: Record<string, string> = { Adelie: 'adelie', Chinstrap: 'chinstrap', Gentoo: 'gentoo' };
+	const PALETTE = ['adelie', 'chinstrap', 'gentoo', 'extra'];
 	const valueClass = (v: string) => (v === 'TRUE' ? 'lt' : v === 'FALSE' ? 'lf' : v === 'NA' ? 'na' : '');
 
 	interface Tile {
@@ -50,6 +53,11 @@
 		});
 	}
 
+	const tintOrder = $derived([
+		...new Set(steps.flatMap((s) => (s.tint ? s.rows.map((r) => r.t ?? '') : [])).filter((t) => t && !SPECIES[t]))
+	]);
+	const tintClass = (t: string) => SPECIES[t] ?? PALETTE[tintOrder.indexOf(t) % PALETTE.length] ?? '';
+
 	function layout(s: AnimStep): Tile[] {
 		const list: Tile[] = [];
 		const placed = new Set<string>();
@@ -62,7 +70,7 @@
 		s.cols.forEach((name, i) => put('h|' + s.ids[i], i, 0, name, 'hdr'));
 		s.rows.forEach((row, ri) => {
 			const r = rpos[ri];
-			const tint = s.tint && row.t ? (TINT[row.t] ?? '') : '';
+			const tint = s.tint && row.t ? tintClass(row.t) : '';
 			s.cols.forEach((name, i) => {
 				const v = row.v[i];
 				const cls = [tint, valueClass(v)].filter(Boolean).join(' ');
@@ -75,7 +83,10 @@
 					row.from.forEach((src) => put(src + '|' + srcCol, i, r, '', cls, 0));
 					put(row.k + '|' + s.ids[i], i, r, v, [cls, 'sum'].filter(Boolean).join(' '));
 				} else {
-					put(row.k + '|' + s.ids[i], i, r, v, cls);
+					// After a split or widen, a cell can name the tile it came from.
+					// If that tile is already placed in this step, this cell is a copy.
+					const src = row.src?.[i];
+					put(src && !placed.has(src) ? src : row.k + '|' + s.ids[i], i, r, v, cls);
 				}
 			});
 		});
@@ -258,8 +269,13 @@
 	}
 	.tile.adelie,
 	.tile.chinstrap,
-	.tile.gentoo {
+	.tile.gentoo,
+	.tile.extra {
 		border-width: 2px;
+	}
+	.tile.extra {
+		border-color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 14%, var(--panel));
 	}
 	.tile.adelie {
 		border-color: var(--adelie);

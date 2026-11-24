@@ -1,0 +1,110 @@
+- id: longer-relig
+  tier: warm-up
+  type: write
+  skill: pl-shape
+  data: relig_income
+  prompt: "Make relig_income long, with the columns religion, income and count."
+  hint: "Stack every column except religion: !religion."
+  solution: |
+    relig_income |>
+      pivot_longer(!religion, names_to = "income", values_to = "count")
+
+- id: longer-billboard-rows
+  tier: warm-up
+  type: predict
+  skill: pl-shape
+  data: billboard
+  prompt: "billboard has 317 songs, with 3 id columns and 76 week columns (wk1 … wk76). How many rows does this return?"
+  code: |
+    billboard |>
+      pivot_longer(starts_with("wk"), names_to = "week", values_to = "rank")
+  options: ["24092", "317", "24409", "76"]
+  verify: 'nrow(result)'
+  explain: "Each of the 317 songs gets one row per week column: 317 × 76 = 24,092. The 3 id columns are copied onto each of a song's 76 rows, not added as rows."
+
+- id: longer-world-bank
+  tier: core
+  type: write
+  skill: pl-names
+  data: world_bank_pop
+  prompt: "Make world_bank_pop long: one row per country, indicator and year, with year as an integer and the numbers in value."
+  hint: "The year columns run from `2000` to `2017`; names in backticks. names_transform turns the text into numbers during the pivot."
+  solution: |
+    world_bank_pop |>
+      pivot_longer(`2000`:`2017`, names_to = "year", values_to = "value",
+                   names_transform = as.integer)
+
+- id: longer-billboard-weeks
+  tier: core
+  type: write
+  skill: pl-clean
+  data: billboard
+  prompt: >-
+    Make billboard long: one row per song and week, with week as a number
+    (1, 2, …) and the chart position in rank. Leave out weeks when the song
+    was not in the chart.
+  hint: "names_prefix strips \"wk\", names_transform makes it a number, and values_drop_na drops the empty weeks."
+  solution: |
+    billboard |>
+      pivot_longer(starts_with("wk"), names_to = "week", names_prefix = "wk",
+                   names_transform = as.integer, values_to = "rank",
+                   values_drop_na = TRUE)
+
+- id: longer-fix-everything
+  tier: core
+  type: fix
+  skill: pl-select
+  data: relig_income
+  prompt: "This should make relig_income long, with columns religion, income and count. Fix it."
+  hint: "Read the error: can a text column and number columns share one count column? Which column should stay as it is?"
+  starter: |
+    relig_income |>
+      pivot_longer(everything(), names_to = "income", values_to = "count")
+  solution: |
+    relig_income |>
+      pivot_longer(!religion, names_to = "income", values_to = "count")
+
+- id: longer-who2
+  tier: stretch
+  type: write
+  skill: pl-names
+  data: who2
+  prompt: >-
+    who2 has columns such as sp_m_014: diagnosis, gender and age group joined
+    by underscores. Make it long with columns country, year, diagnosis,
+    gender, age and count, dropping missing counts.
+  hint: "names_to can take three names, and names_sep tells pivot_longer() where to cut."
+  solution: |
+    who2 |>
+      pivot_longer(!c(country, year), names_to = c("diagnosis", "gender", "age"),
+                   names_sep = "_", values_to = "count", values_drop_na = TRUE)
+
+- id: longer-longest-run
+  tier: stretch
+  type: constrained
+  skill: pl-select
+  data: billboard
+  prompt: "From billboard, which song spent the most weeks in the chart? Return artist, track and weeks."
+  hint: "Long first, without the empty weeks; then count rows per song and keep the top one."
+  solution: |
+    billboard |>
+      pivot_longer(starts_with("wk"), values_to = "rank", values_drop_na = TRUE) |>
+      count(artist, track, name = "weeks") |>
+      slice_max(weeks, n = 1)
+  require: ["pivot_longer"]
+
+- id: longer-penguin-means
+  tier: brain-melter
+  type: write
+  skill: pl-shape
+  prompt: >-
+    From penguins, one row per species and measurement (bill length, bill
+    depth, flipper length, body mass), with the mean of each, as columns
+    species, measure and mean.
+  hint: "Stack the four measurements into measure and value, then one summarise() over species and measure."
+  solution: |
+    penguins |>
+      pivot_longer(c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g),
+                   names_to = "measure", values_to = "value") |>
+      summarise(mean = mean(value, na.rm = TRUE), .by = c(species, measure))
+  compare: {ignore_row_order: true}

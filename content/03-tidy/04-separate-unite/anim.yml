@@ -1,0 +1,21 @@
+data: table3
+steps:
+  - code: ""
+    show: table3
+    tint: country
+    caption: "table3: two values, cases and population, squeezed into one rate cell as text."
+  - code: 'separate_wider_delim(rate, delim = "/", names = c("cases", "population"))'
+    tint: country
+    caption: "Cut at the slash: one column becomes two, and the rows stay as they are. The pieces are still text, so they sort and compare as text."
+    skill: su-split
+  - code: 'mutate(cases = as.integer(cases), population = as.integer(population))'
+    tint: country
+    caption: "Now they are numbers. The values look the same; what changed is what R can do with them."
+    skill: su-types
+  - code: 'mutate(rate = cases / population * 10000)'
+    tint: country
+    caption: "And the rate R could not compute from table3 is one line."
+  - code: 'select(-rate) |> unite("rate", cases, population, sep = "/")'
+    tint: country
+    caption: "unite() goes back: drop the computed rate, then glue the two columns with \"/\", as text. (Without sep, unite() would use \"_\".)"
+    skill: su-unite

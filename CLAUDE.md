@@ -150,7 +150,7 @@ Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
 |---|---|---|---|---|
 | 1 | R foundations | atomic vectors and types · coercion · vectorization and recycling · logical operators and NA · subsetting `[` `[[` `$` · lists | – | Adv R 3–4, r4ds 12, 27, primer 2 |
 | 2 | One-table wrangling (**built**) | filter · arrange + slice_* · select + rename · mutate + if_else + case_when · summarise · group_by + summarise · across | 1 | r4ds 3, MDSR 4, primer 6 |
-| 3 | Tidy data and reshaping | what makes data tidy · pivot_longer · pivot_wider · separate_wider_* and unite · explicit vs implicit missing | 2 | r4ds 5, 18, MDSR 6, primer 8 |
+| 3 | Tidy data and reshaping (**built**) | what makes data tidy · pivot_longer · pivot_wider · separate_wider_* and unite · explicit vs implicit missing | 2 | r4ds 5, 18, MDSR 6, primer 8 |
 | 4 | Joins | keys · mutating joins · filtering joins · duplicate keys, many-to-many · join_by inequality/rolling | 2 | r4ds 19, MDSR 5, primer 7 |
 | 5 | Real-world data types | import + cleaning (readr, janitor) · counts and proportions (marginal/joint/conditional) · stringr · regex · forcats · lubridate | 2 | r4ds 7, 14–17, primer 8–10 |
 | 6 | Visualization | aes vs constants · geoms and stats · positions (counts vs proportions) · scales and coords · facets · labels/themes/annotations | 2 | r4ds 1, 9–11, MDSR 2–3, primer 4–5 |
@@ -228,8 +228,12 @@ check only); `scripts/fetch-assets.mjs` mirrors both from repo.r-wasm.org.
 every fix starter fails; a `deparse()`d literal of each expected answer fails
 (unless `robust: false`); each forbidden token slipped into the solution is caught.
 
-Totals: 7 modules, 30 subskills, 56 challenges, 14 probe trees, 43 animation
-steps, 1,429 lines of YAML.
+Totals:
+
+| Track | Modules | Subskills | Challenges | Probe trees | Animation steps | YAML lines |
+|---|---|---|---|---|---|---|
+| 2, `content/02-wrangling` | 7 | 30 | 56 | 14 | 43 | 1,429 |
+| 3, `content/03-tidy` | 5 | 19 | 40 | 10 | 25 | 1,152 |
 
 ### Content format
 
@@ -277,13 +281,35 @@ steps:
   - from_data: true                            # restart from `data`
     code: "select(species, mass = body_mass_g)"
     renames: {mass: body_mass_g}               # keeps tile identity across a rename
+  - code: 'pivot_longer(c(bill_length_mm, bill_depth_mm), names_to = "measure", values_to = "mm")'
+    split: {names: measure, values: mm}        # one row -> several; each value tile flies
+                                               #   to its long row (prefix: "bill_" with names_prefix)
+  - code: 'pivot_wider(names_from = measure, values_from = mm)'
+    widen: {names: measure, values: mm}        # several rows -> one; runs without .id;
+                                               #   id columns merge, each new cell takes its tile
 ```
+Row identity is the hidden `.id` column (tile key `<row key>|<column id>`).
+After `split`, row keys become `<id>:<name>`. Rows a step adds with no source
+(`complete()`) get keys `+<n>` and fade in; duplicate keys fail the build. A
+step that changes the row count needs `merge`, `split` or `widen`, unless the
+verb keeps `.id` (filter, arrange, complete). Tint colours: penguin species
+get their own; any other values (countries, years) take the same colours in
+order of first appearance. List-column cells print like tibble (`<dbl [2]>`).
 
 **challenges.yml** fields: `id, tier (warm-up|core|stretch|brain-melter),
 type (write|fix|constrained|predict), skill, data (default penguins), prompt,
 hint, solution, starter (fix), forbid, require (token lists checked on parse
-data), compare: {ignore_row_order: true}`; predict type adds `code, options,
-verify, explain`.
+data), compare: {ignore_row_order, ignore_column_order}, robust`; predict
+type adds `code, options, verify, explain`. Use `ignore_column_order` when a
+correct answer can order columns differently (pivot_wider names columns in
+order of first appearance; unite() puts the new column first). `robust: false`
+(with a comment why) only when the half-sample re-run cannot work, e.g. on
+6-row tables where a group loses a member: then a typed-in answer can pass.
+
+Datasets: `penguins_sample` and `stocks` (7-row quarterly prices with one
+explicit NA and one absent row, after r4ds 18.3) are defined in
+`content/setup.R`; tidyr's `table1`–`table5`, `billboard`, `relig_income`,
+`who2`, `world_bank_pop`, `fish_encounters`, `us_rent_income` come with tidyr.
 
 **Animation sample:** `penguins_sample <- penguins[c(1, 277, 153, 21, 4, 278, 31, 154), ]`
 with `.id` = those row numbers (tile keys). Row 4 has NA mass and NA sex on
@@ -379,15 +405,21 @@ It runs under webR (`.build_args` set by check.mjs) or native R
    palmerpenguins 0.1.1 and 27 dependencies.
 2. ~~**Track 2 in the real app with webR grading.**~~ **Done 2026-11-24**
    (sections 0 and 5), together with old step 6 (the lesson-loop port).
-   Nothing is committed yet: the repo has no commits.
-3. Bring back **nycflights13** challenges (add it to `r-packages.json`; it is
+3. ~~**Track 3, tidy data and reshaping.**~~ **Done 2026-11-24**: 5 modules,
+   with the split/widen animation steps (section 5). Checked in the browser:
+   pivot tiles move cell to cell, widen merges, the list-column case,
+   complete()'s new row, and pipeline grading with relaxed column order.
+   Next track by curriculum order: **Track 4, Joins** (needs a key-matcher
+   visual; a join's row identity is a pair of source rows, so expect another
+   step type like `split`/`widen`).
+4. Bring back **nycflights13** challenges (add it to `r-packages.json`; it is
    on repo.r-wasm.org, 1.0.2).
-4. Consider adding `filter_out()` / `when_any()` to the filter module.
-5. Write the **lubridate** track and the **janitor** modules (section 4).
-6. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
+5. Consider adding `filter_out()` / `when_any()` to the filter module.
+6. Write the **lubridate** track and the **janitor** modules (section 4).
+7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
    new track is a `content/<NN-name>/` folder; the routes and the content
    check pick it up automatically.
-7. Smaller follow-ups:
+8. Smaller follow-ups:
    - a review queue across all tracks;
    - the timeline-ruler visual for lubridate;
    - lazy-loading ggplot2 at runtime (it is mounted at boot, though only `mpg` uses it so far).
@@ -424,6 +456,13 @@ It runs under webR (`.build_args` set by check.mjs) or native R
 - **Service worker:** preview servers send `Vary: Origin`, and module imports
   carry an `Origin` header that precache requests don't, so `cache.match`
   missed every lazily loaded chunk offline. The fix is `ignoreVary: true`.
+- Captions and prompts are prose, so no check can catch a wrong claim in
+  them. A caption said `<int [2]>` for table2's list-column, but `count` is
+  a double (`<dbl [2]>`); it was only caught by looking at the animation.
+  Check every type or number a caption names in R.
+- The content check rewrites `src/lib/generated/*.json` while the dev server
+  watches it; build.R writes to `.tmp` and renames, or Vite can read a
+  half-written file (`EOF while parsing`).
 - Prerendered pages can't read the query string in `load()`; read
   `location.search` in `onMount` (the `?review=` link). Link to the slash form
   (`.../c/<id>/?review=`) so the query never goes through a redirect.

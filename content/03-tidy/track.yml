@@ -1,0 +1,123 @@
+id: tidy
+number: 3
+title: Tidy data and reshaping
+summary: >-
+  The same data can sit in many layouts. Learn which one the tidyverse
+  expects, and move between them: lengthen, widen, split and glue columns,
+  and make missing values visible.
+needs: [wrangling]
+modules: [01-tidy-data, 02-pivot-longer, 03-pivot-wider, 04-separate-unite, 05-missing]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-which-tidy
+    skill: td-rules
+    module: 01-tidy-data
+    ask: "Two tables hold the same TB cases. Which one is tidy?"
+    options:
+      - {choice: "country | year | cases", correct: true}
+      - {choice: "country | 1999 | 2000", misconception: wide-is-tidy}
+      - {choice: "Both: they hold the same numbers", misconception: same-data-same-tidiness}
+  - id: d-longer-rows
+    skill: pl-shape
+    module: 02-pivot-longer
+    ask: "A table has 5 rows: an id column and 3 score columns. How many rows does pivot_longer(!id) return?"
+    options:
+      - {choice: "15", correct: true}
+      - {choice: "5", misconception: longer-keeps-rows}
+      - {choice: "20", misconception: original-row-kept}
+    verify: "nrow(tidyr::pivot_longer(data.frame(id = 1:5, a = 1, b = 2, c = 3), !id))"
+  - id: d-wider-rows
+    skill: pw-shape
+    module: 03-pivot-wider
+    ask: "A long table has 6 rows: 3 ids, each with a height row and a weight row (columns id, name, value). How many rows does pivot_wider(names_from = name, values_from = value) return?"
+    options:
+      - {choice: "3", correct: true}
+      - {choice: "6", misconception: wider-keeps-rows}
+      - {choice: "2", misconception: one-row-per-name}
+    verify: "nrow(tidyr::pivot_wider(data.frame(id = rep(1:3, each = 2), name = rep(c('height', 'weight'), 3), value = 1:6), names_from = name, values_from = value))"
+  - id: d-split-type
+    skill: su-types
+    module: 04-separate-unite
+    ask: "separate_wider_delim() splits \"12/30\" at the slash. What type are the two new columns?"
+    options:
+      - {choice: "character", correct: true}
+      - {choice: "integer", misconception: split-converts}
+      - {choice: "One integer, one character", misconception: split-guesses}
+    verify: "class(tidyr::separate_wider_delim(tibble::tibble(x = '12/30'), x, delim = '/', names = c('a', 'b'))$a)"
+  - id: d-complete-rows
+    skill: mi-complete
+    module: 05-missing
+    ask: "A table should have 3 stores × 4 quarters, but 2 store-quarters have no row, so it has 10 rows. How many rows does complete(store, quarter) return?"
+    options:
+      - {choice: "12", correct: true}
+      - {choice: "10", misconception: complete-no-new-rows}
+      - {choice: "8", misconception: complete-drops}
+    verify: "nrow(tidyr::complete(data.frame(store = rep(c('a', 'b', 'c'), each = 4), quarter = rep(1:4, 3))[-c(2, 7), ], store, quarter))"
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-billboard-spread
+      skill: td-spot
+      ask: "billboard has columns artist, track, date.entered, then wk1 … wk76 with chart positions. What is spread across wk1 … wk76?"
+      options:
+        - {choice: "The values of one variable, the week", correct: true}
+        - {choice: "76 different variables", misconception: names-are-variables}
+        - {choice: "Nothing: one column per week is tidy", misconception: wide-is-tidy}
+      explain: "Every wk column measures the same thing, the chart rank, in a different week. So week is a variable hiding in the column names; pivot_longer() turns it into a column."
+    - id: fin-prefix
+      skill: pl-names
+      ask: "pivot_longer(starts_with(\"wk\"), names_to = \"week\", names_prefix = \"wk\") on billboard. For the column wk12, what is week?"
+      options:
+        - {choice: "The text \"12\"", correct: true}
+        - {choice: "The number 12", misconception: names-are-numbers}
+        - {choice: "The text \"wk12\"", misconception: prefix-ignored}
+      explain: "names_prefix strips wk, but a column name is still text. Add names_transform = as.integer to make week a number."
+      verify: 'identical(tidyr::pivot_longer(tibble::tibble(wk12 = 1), starts_with("wk"), names_to = "week", names_prefix = "wk")$week, "12")'
+    - id: fin-fill-zero
+      skill: pw-fill
+      ask: "fish_encounters |> pivot_wider(names_from = station, values_from = seen, values_fill = 0). How many cells are 0?"
+      options:
+        - {choice: "95", correct: true}
+        - {choice: "0", misconception: missing-is-na-anyway}
+        - {choice: "114", misconception: counts-rows}
+      explain: "19 fish × 11 stations = 209 cells; 114 come from rows, and the other 95 had no row, so values_fill puts 0 in them."
+      verify: "sum(fish_encounters |> tidyr::pivot_wider(names_from = station, values_from = seen, values_fill = 0) == 0)"
+    - id: fin-too-few
+      skill: su-too
+      ask: "tibble(x = \"a\") |> separate_wider_delim(x, delim = \",\", names = c(\"p\", \"q\"), too_few = \"align_start\"). What is q?"
+      options:
+        - {choice: "NA", correct: true}
+        - {choice: "\"a\"", misconception: align-copies}
+        - {choice: "An error: too few pieces", misconception: too-few-still-errors}
+      explain: "With too_few = \"align_start\", the pieces fill from the left and the missing ones become NA. Without it, the call would error."
+      verify: 'is.na(tidyr::separate_wider_delim(tibble::tibble(x = "a"), x, delim = ",", names = c("p", "q"), too_few = "align_start")$q)'
+    - id: fin-round-trip
+      skill: mi-drop
+      ask: "fish_encounters has 114 rows. How many rows does complete(fish, station) |> drop_na() return?"
+      options:
+        - {choice: "114", correct: true}
+        - {choice: "209", misconception: drop-na-noop}
+        - {choice: "95", misconception: drop-keeps-missing}
+      explain: "complete() adds the 95 absent fish-station rows with seen = NA; drop_na() removes exactly those again."
+      verify: "nrow(fish_encounters |> tidyr::complete(fish, station) |> tidyr::drop_na())"
+  integrative:
+    id: fin-who-gender
+    data: who2
+    prompt: >-
+      From who2, the total number of TB cases per year and gender, for the
+      years 2000 and later: one row per year, with the totals for each
+      gender in columns f and m.
+    hint: >-
+      Lengthen with names_sep to get diagnosis, gender and age, drop missing
+      counts, then summarise per year and gender, and widen by gender.
+    solution: |
+      who2 |>
+        pivot_longer(!c(country, year), names_to = c("diagnosis", "gender", "age"),
+                     names_sep = "_", values_to = "count", values_drop_na = TRUE) |>
+        filter(year >= 2000) |>
+        summarise(count = sum(count), .by = c(year, gender)) |>
+        pivot_wider(names_from = gender, values_from = count)
+    compare: {ignore_row_order: true, ignore_column_order: true}

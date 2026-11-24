@@ -1,0 +1,72 @@
+id: 05-missing
+title: "Explicit and implicit missing values"
+key_idea: >-
+  A value can be missing in two ways: explicitly, as an NA in a cell, or
+  implicitly, as a row that is simply not there. Many tools only see the
+  first kind. complete() turns absent combinations into explicit NA rows,
+  fill() carries the last known value down, and drop_na() removes rows,
+  so it matters which columns you give it.
+subskills:
+  - {id: mi-explicit, name: "An NA cell vs a row that is absent"}
+  - {id: mi-complete, name: "complete() adds the absent combinations"}
+  - {id: mi-fill, name: "fill() carries values down (or up)"}
+  - {id: mi-drop, name: "drop_na() removes rows: mind the columns"}
+readings:
+  - {label: "r4ds 18, Missing values", url: "https://r4ds.hadley.nz/missing-values.html"}
+  - {label: "tidyr: complete()", url: "https://tidyr.tidyverse.org/reference/complete.html"}
+  - {label: "STAT 7500 primer ch. 9 (cleaning)", url: ""}
+
+predict:
+  skill: mi-complete
+  code: |
+    stocks |>
+      complete(year, qtr)
+  ask: "stocks has 7 rows: quarterly prices for 2020 and 2021. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "8 × 3", correct: true}
+    - choice: "7 × 3"
+      misconception: complete-no-new-rows
+      probe: "Look for 2021 in the table. Which quarter of 2021 has no row?"
+    - choice: "6 × 3"
+      misconception: complete-drops-na
+      probe: "complete() means \"make complete\". Would it remove the 2020 Q4 row just because its price is NA?"
+    - choice: "8 × 4"
+      misconception: complete-flags
+      probe: "Which columns did you ask complete() to combine? Does it add a column to mark the new rows?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-two-kinds
+    skill: mi-explicit
+    ask: "In stocks, how many quarterly prices are missing?"
+    options:
+      - {choice: "2: one NA cell, and one quarter with no row at all", correct: true}
+      - choice: "1: the NA in 2020 Q4"
+        misconception: only-na-counts
+        probe: "Is there a row for 2021 Q1? If not, do we know that quarter's price?"
+      - choice: "0: missing rows are just not there"
+        misconception: na-not-missing
+        probe: "What does the NA in 2020 Q4 mean, if not a missing price?"
+    right_followup: "Are you sure? sum(is.na(stocks$price)) returns 1. Which of the two can it not see?"
+    explain: >-
+      2020 Q4 is explicitly missing: the row exists and the price is NA.
+      2021 Q1 is implicitly missing: there is no row at all, so is.na() and
+      summaries never see it. complete(year, qtr) adds the row, with NA.
+  - id: p-fill-crosses
+    skill: mi-fill
+    ask: "In stocks |> complete(year, qtr) |> fill(price), what price does 2021 Q1 get?"
+    options:
+      - {choice: "0.35, carried from 2020 Q3 through 2020 Q4", correct: true}
+      - choice: "NA: fill() only fills existing NAs, not new rows"
+        misconception: fill-skips-new
+        probe: "After complete(), is 2021 Q1's NA any different from 2020 Q4's NA?"
+      - choice: "0.92, from 2021 Q2"
+        misconception: fill-up-default
+        probe: "Which direction does fill() go unless you set .direction?"
+    right_followup: "Are you sure? Is a 2020 price a sensible guess for 2021? What would group_by(year) change?"
+    explain: >-
+      fill() goes down by default and carries the last value it saw, so
+      0.35 fills 2020 Q4 and then 2021 Q1. It ignores where one year ends.
+      Grouped by year, fill() stops at the year boundary and 2021 Q1 stays NA.
+    verify: 'isTRUE(all.equal((stocks |> tidyr::complete(year, qtr) |> tidyr::fill(price))$price[5], 0.35))'

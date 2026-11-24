@@ -1,0 +1,77 @@
+id: 01-tidy-data
+title: "Tidy data: one variable per column, one observation per row"
+key_idea: >-
+  The same numbers can be laid out in many tables. A table is tidy when each
+  variable is a column, each observation is a row, and each value is a cell.
+  Tidy is the layout the tidyverse verbs expect: a calculation that is one
+  mutate() on a tidy table can need a workaround on an untidy one.
+subskills:
+  - {id: td-rules, name: "Each variable a column, each observation a row"}
+  - {id: td-spot, name: "Spot what is spread: names, rows or cells"}
+  - {id: td-why, name: "Tidy data lets vectorised verbs work"}
+readings:
+  - {label: "r4ds 5, Data tidying", url: "https://r4ds.hadley.nz/data-tidy.html"}
+  - {label: "MDSR 6.1, Tidy data", url: "https://mdsr-book.github.io/mdsr3e/06-dataII.html"}
+  - {label: "STAT 7500 primer ch. 8 (pivoting)", url: ""}
+
+predict:
+  skill: td-rules
+  code: |
+    table1 |>
+      pivot_longer(c(cases, population),
+                   names_to = "type", values_to = "count")
+  ask: >-
+    table1 has 6 rows (3 countries × 2 years) and 4 columns: country, year,
+    cases and population. This stacks cases and population into one column,
+    the layout of table2. What shape is the result?
+  show_data: true
+  options:
+    - {choice: "12 × 4", correct: true}
+    - choice: "6 × 4"
+      misconception: same-data-same-shape
+      probe: "Each country-year has two numbers. If both have to fit in one column, how many cells does that column need?"
+    - choice: "12 × 5"
+      misconception: stacked-columns-stay
+      probe: "Once the cases values have moved into count, is there anything left for a cases column to hold?"
+    - choice: "6 × 3"
+      misconception: stacking-merges
+      probe: "Is a cases number the same thing as a population number? Could one cell hold both?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-which-tidy
+    skill: td-rules
+    ask: "tidyr ships the same data as table1, table2, table3 and table4a. Which one is tidy?"
+    options:
+      - {choice: "table1: country, year, cases, population", correct: true}
+      - choice: "table2: country, year, type, count"
+        misconception: long-is-always-tidy
+        probe: "Is a row of table2 one observation of a country in a year, or half of one?"
+      - choice: "table3: country, year, rate (\"745/19987071\")"
+        misconception: one-cell-two-values
+        probe: "How many numbers live in the cell \"745/19987071\"? Can you add 1 to it?"
+      - choice: "table4a: country, 1999, 2000"
+        misconception: wide-is-tidy
+        probe: "Is 1999 a variable, like cases, or a value of the variable year?"
+    right_followup: "Are you sure? table1 also has one row per country and year. Would it still be tidy if each row were one country, with columns cases_1999 and cases_2000?"
+    explain: >-
+      Tidiness is about variables, not about long or wide. table1 has one
+      column per variable (country, year, cases, population). table2 puts
+      variable names in a column, table3 puts two values in one cell, and
+      table4a puts values of year in the column names.
+  - id: p-spread
+    skill: td-spot
+    ask: "table4a has the columns country, `1999` and `2000`. What is spread across those column names?"
+    options:
+      - {choice: "The values of one variable, year", correct: true}
+      - choice: "Two different variables"
+        misconception: names-are-variables
+        probe: "Do the 1999 and 2000 columns measure different things, or the same thing (cases) in different years?"
+      - choice: "Nothing: one column per year is tidy"
+        misconception: wide-is-tidy
+        probe: "Where would a third year go: a new column or a new row? And which one should a new observation need?"
+    right_followup: "Are you sure? Then which column of table4a holds the variable cases?"
+    explain: >-
+      1999 and 2000 are values of year, and the cells under them are cases.
+      So year is hiding in the column names and cases has no name at all.
+      pivot_longer() (next module) moves both back into columns.

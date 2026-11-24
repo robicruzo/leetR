@@ -1,0 +1,25 @@
+data: penguins_sample |> select(species, bill_length_mm, bill_depth_mm)
+steps:
+  - code: ""
+    show: penguins_sample
+    tint: species
+    caption: "Eight penguins with two bill measurements each. The column names bill_length_mm and bill_depth_mm are really values of one variable: which measurement."
+  - code: 'pivot_longer(c(bill_length_mm, bill_depth_mm), names_to = "measure", values_to = "mm")'
+    split: {names: measure, values: mm}
+    tint: species
+    caption: "Each penguin's row splits in two. Its two number tiles drop into one mm column, the old column names become values of measure, and species is copied onto both rows."
+    skill: pl-shape
+  - code: 'arrange(measure)'
+    tint: species
+    caption: "Sorted by measure, the long table is the two old columns stacked: 8 depths, then 8 lengths."
+    skill: pl-names
+  - code: 'summarise(mean_mm = mean(mm, na.rm = TRUE), .by = measure)'
+    merge: {by: [measure], pour: {mean_mm: mm}}
+    tint: species
+    caption: "Why bother? Now one summarise() handles every measurement at once. Each stack pours into its mean."
+  - from_data: true
+    code: 'pivot_longer(starts_with("bill_"), names_to = "measure", names_prefix = "bill_", values_to = "mm", values_drop_na = TRUE)'
+    split: {names: measure, values: mm, prefix: "bill_"}
+    tint: species
+    caption: "The same pivot, tidied as it goes: starts_with() picks the columns, names_prefix strips bill_ from the names, and values_drop_na drops penguin 4's two missing measurements. 14 rows, not 16."
+    skill: pl-clean

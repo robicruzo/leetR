@@ -1,0 +1,77 @@
+id: 02-pivot-longer
+title: "pivot_longer(): column names become values"
+key_idea: >-
+  pivot_longer() takes columns whose names are really values (weeks, years,
+  measurements) and stacks them. Each chosen column becomes a set of rows:
+  its name goes into the names_to column and its cells into the values_to
+  column. Every column you did not choose is repeated, as an id.
+subskills:
+  - {id: pl-shape, name: "Rows multiply: rows × stacked columns"}
+  - {id: pl-names, name: "names_to gets the old names, as text"}
+  - {id: pl-select, name: "cols picks what to stack; the rest are ids"}
+  - {id: pl-clean, name: "names_prefix, names_transform, values_drop_na"}
+readings:
+  - {label: "r4ds 5.3, Lengthening data", url: "https://r4ds.hadley.nz/data-tidy.html#sec-pivoting"}
+  - {label: "MDSR 6.2.2, pivot_longer()", url: "https://mdsr-book.github.io/mdsr3e/06-dataII.html"}
+  - {label: "STAT 7500 primer ch. 8 (pivot_longer)", url: ""}
+
+predict:
+  skill: pl-shape
+  code: |
+    penguins_sample |>
+      select(species, bill_length_mm, bill_depth_mm) |>
+      pivot_longer(c(bill_length_mm, bill_depth_mm),
+                   names_to = "measure", values_to = "mm")
+  ask: "The sample, with these 3 columns, is 8 rows × 3 columns. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "16 × 3", correct: true}
+    - choice: "8 × 3"
+      misconception: longer-keeps-rows
+      probe: "Each penguin has two measurements, and after the pivot there is one mm column. How many rows does one penguin need?"
+    - choice: "16 × 4"
+      misconception: stacked-columns-stay
+      probe: "After the pivot, the names bill_length_mm and bill_depth_mm are values in measure. Is there still a bill_length_mm column?"
+    - choice: "24 × 3"
+      misconception: everything-stacks
+      probe: "Is species inside c(...)? What happens to a column you did not choose?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-relig-rows
+    skill: pl-shape
+    ask: "relig_income has 18 rows: a religion column and 10 income columns. How many rows does pivot_longer(!religion, names_to = \"income\", values_to = \"count\") return?"
+    options:
+      - {choice: "180", correct: true}
+      - choice: "18"
+        misconception: longer-keeps-rows
+        probe: "Each religion has 10 counts and the result has one count column. How many rows does one religion need?"
+      - choice: "198"
+        misconception: original-row-kept
+        probe: "Does each religion also keep its original wide row? Which column would that row's 10 counts go in?"
+      - choice: "10"
+        misconception: one-row-per-column
+        probe: "Each income column turns into rows, but for which religions?"
+    right_followup: "Are you sure? What would you get with pivot_longer(everything()) instead, and why?"
+    explain: >-
+      Every chosen column contributes one row per original row: 18 religions
+      × 10 income columns = 180 rows. religion was not chosen (!religion), so
+      it is repeated as an id on each of a religion's 10 rows.
+    verify: 'nrow(relig_income |> tidyr::pivot_longer(!religion, names_to = "income", values_to = "count"))'
+  - id: p-name-type
+    skill: pl-names
+    ask: "table4a |> pivot_longer(c(`1999`, `2000`), names_to = \"year\", values_to = \"cases\"): what type is the new year column?"
+    options:
+      - {choice: "character", correct: true}
+      - choice: "integer"
+        misconception: names-are-numbers
+        probe: "The values of year come from column names. What type is a column name, always?"
+      - choice: "factor"
+        misconception: names-become-factors
+        probe: "Does tidyr turn text into factors unless you ask it to?"
+    right_followup: "Are you sure? How would you make year an integer within the same pivot_longer() call?"
+    explain: >-
+      Column names are always text, so the names_to column is character.
+      names_transform = list(year = as.integer) converts it during the pivot;
+      names_prefix = "wk" would first strip a prefix such as wk from wk12.
+    verify: 'class((table4a |> tidyr::pivot_longer(c(`1999`, `2000`), names_to = "year", values_to = "cases"))$year)'

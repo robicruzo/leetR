@@ -34,6 +34,7 @@ export interface AnimRow {
 	v: string[]; // formatted values, one per visible column
 	t?: string; // tint value (e.g. the species)
 	from?: string[]; // source row keys that merged into this row
+	src?: (string | null)[]; // per visible column: the tile this cell came from (split/widen)
 }
 
 export interface AnimStep {
@@ -69,7 +70,7 @@ export interface TrackChallenge {
 	data: string;
 	forbid: string[] | null;
 	require: string[] | null;
-	compare: { ignore_row_order?: boolean } | null;
+	compare: { ignore_row_order?: boolean; ignore_column_order?: boolean } | null;
 	robust: boolean | null;
 	dims?: string;
 	expected?: string;
@@ -136,6 +137,7 @@ export function snippetOptions(ch: TrackChallenge): SnippetOptions {
 	return {
 		data: ch.data,
 		ignore_row_order: ch.compare?.ignore_row_order ?? false,
+		ignore_column_order: ch.compare?.ignore_column_order ?? false,
 		forbid: ch.forbid ?? undefined,
 		require: ch.require ?? undefined,
 		robust: ch.robust === false ? false : undefined

@@ -60,6 +60,7 @@ export interface GradeOptions {
 export interface SnippetOptions {
 	data: string;
 	ignore_row_order?: boolean;
+	ignore_column_order?: boolean;
 	forbid?: string[];
 	require?: string[];
 	robust?: boolean;

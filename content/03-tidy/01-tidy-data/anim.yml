@@ -1,0 +1,21 @@
+data: table1
+steps:
+  - code: ""
+    show: table1
+    tint: country
+    caption: "table1: three countries, two years each. Every column is one variable and every row is one country in one year."
+  - code: "mutate(rate = cases / population * 10000)"
+    tint: country
+    caption: "Because cases and population are columns, the rate per 10,000 people is one vectorised line: R divides the two columns row by row."
+    skill: td-why
+  - from_data: true
+    code: 'pivot_longer(c(cases, population), names_to = "type", values_to = "count")'
+    split: {names: type, values: count}
+    tint: country
+    caption: "The same numbers in table2's layout. Each cases and population tile drops into one count column, and each row splits in two. A row is now half an observation."
+    skill: td-rules
+  - code: 'pivot_wider(names_from = type, values_from = count)'
+    widen: {names: type, values: count}
+    tint: country
+    caption: "And back: the two halves of each country-year join up again. Same data, but only this layout lets cases / population be one line."
+    skill: td-spot

@@ -1,0 +1,113 @@
+- id: sep-table3
+  tier: warm-up
+  type: write
+  skill: su-split
+  data: table3
+  prompt: "Split table3's rate into two columns, cases and population."
+  hint: "separate_wider_delim() needs the column, the delimiter and the new names."
+  solution: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/", names = c("cases", "population"))
+
+- id: unite-table5
+  tier: warm-up
+  type: write
+  skill: su-unite
+  data: table5
+  prompt: "From table5, glue century and year into one column year, written like \"1999\"."
+  hint: "unite() puts \"_\" between the pieces unless you give sep."
+  solution: |
+    table5 |>
+      unite("year", century, year, sep = "")
+
+- id: sep-rate-numbers
+  tier: core
+  type: write
+  skill: su-types
+  data: table3
+  prompt: "From table3, split rate into integer columns cases and population, then add rate: cases per 10,000 people."
+  hint: "as.integer() on both pieces, then the division. One mutate() can do all three, in order."
+  solution: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/", names = c("cases", "population")) |>
+      mutate(cases = as.integer(cases), population = as.integer(population),
+             rate = cases / population * 10000)
+
+- id: sep-fix-text-math
+  tier: core
+  type: fix
+  skill: su-types
+  data: table3
+  prompt: "This should add cases per person after splitting rate. Fix it."
+  hint: "Read the error: what type are cases and population right after the split?"
+  starter: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/", names = c("cases", "population")) |>
+      mutate(per_person = cases / population)
+  solution: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/", names = c("cases", "population")) |>
+      mutate(cases = as.integer(cases), population = as.integer(population),
+             per_person = cases / population)
+
+- id: unite-label
+  tier: core
+  type: write
+  skill: su-unite
+  prompt: "From penguins, add label, such as \"Adelie-Torgersen\", built from species and island, and keep species and island as they are."
+  hint: "unite() removes the columns it glues unless remove = FALSE."
+  solution: |
+    penguins |>
+      unite("label", species, island, sep = "-", remove = FALSE)
+  compare: {ignore_column_order: true}
+
+- id: sep-skin-colours
+  tier: stretch
+  type: write
+  skill: su-too
+  data: starwars
+  prompt: >-
+    starwars skin_color holds up to three colours, such as "fair, green,
+    yellow". Keep name and skin_color, and split skin_color into skin1, skin2
+    and skin3, with NA where a character has fewer colours.
+  hint: "Most characters have one colour. too_few = \"align_start\" fills the missing pieces on the right with NA."
+  solution: |
+    starwars |>
+      select(name, skin_color) |>
+      separate_wider_delim(skin_color, delim = ", ",
+                           names = c("skin1", "skin2", "skin3"),
+                           too_few = "align_start")
+
+- id: sep-predict-text-max
+  tier: stretch
+  type: predict
+  skill: su-types
+  data: table3
+  prompt: "What does this return?"
+  code: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/", names = c("cases", "population")) |>
+      arrange(desc(cases)) |>
+      slice_head(n = 1) |>
+      pull(cases)
+  options: ["80488", "213766", "745"]
+  verify: 'result'
+  explain: >-
+    cases is still text, so desc() sorts it as text, character by character:
+    "8" beats "2" and "7", so "80488" comes first, though 213766 is the
+    largest number. Convert with as.integer() before sorting.
+
+- id: sep-longer-skins
+  tier: brain-melter
+  type: write
+  skill: su-split
+  data: starwars
+  prompt: >-
+    Counting each colour of a multi-coloured character once, how many starwars
+    characters have each skin colour? Return skin_color and n, most common
+    first.
+  hint: "separate_longer_delim() cuts a cell into rows instead of columns. Then count."
+  solution: |
+    starwars |>
+      separate_longer_delim(skin_color, delim = ", ") |>
+      count(skin_color, sort = TRUE)

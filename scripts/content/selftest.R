@@ -28,6 +28,7 @@ if (!is.null(ig)) gradable[[length(gradable) + 1]] <- c(ig, list(where = paste0(
 opts_of <- function(ch) list(
   data = ch$data %||% "penguins",
   ignore_row_order = isTRUE(ch$compare$ignore_row_order),
+  ignore_column_order = isTRUE(ch$compare$ignore_column_order),
   forbid = unlist(ch$forbid), require = unlist(ch$require),
   robust = !isFALSE(ch$robust)
 )

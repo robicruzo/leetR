@@ -1,0 +1,94 @@
+- id: miss-complete-stocks
+  tier: warm-up
+  type: write
+  skill: mi-complete
+  data: stocks
+  prompt: "Make every year and quarter of stocks explicit, with NA for prices that are not there."
+  hint: "complete() takes the columns whose combinations should all exist."
+  solution: |
+    stocks |>
+      complete(year, qtr)
+
+- id: miss-drop-height
+  tier: warm-up
+  type: write
+  skill: mi-drop
+  data: starwars
+  prompt: "From starwars, drop the characters whose height is unknown, and only those."
+  hint: "drop_na() with no columns drops a row if any column is NA. Name the column."
+  solution: |
+    starwars |>
+      drop_na(height)
+
+- id: miss-predict-drop-all
+  tier: core
+  type: predict
+  skill: mi-drop
+  prompt: "penguins has 344 rows. 11 have an unknown sex, and 2 of those 11 also have no measurements. How many rows does this return?"
+  code: |
+    penguins |>
+      drop_na()
+  options: ["333", "331", "342", "344"]
+  verify: 'nrow(result)'
+  explain: "A row is dropped once, however many NAs it has. The 2 penguins with no measurements are among the 11 with unknown sex, so 344 − 11 = 333 rows remain."
+
+- id: miss-fill-up
+  tier: core
+  type: write
+  skill: mi-fill
+  data: stocks
+  prompt: "In stocks, replace each missing price with the next quarter's price instead of the previous one."
+  hint: "fill() has a .direction argument."
+  solution: |
+    stocks |>
+      fill(price, .direction = "up")
+
+- id: miss-fish-grid
+  tier: core
+  type: write
+  skill: mi-complete
+  data: fish_encounters
+  prompt: "Make fish_encounters complete: a row for every fish at every station, with seen = 0 where the fish was not seen."
+  hint: "complete() takes a fill argument: a named list of values for the new rows."
+  solution: |
+    fish_encounters |>
+      complete(fish, station, fill = list(seen = 0))
+
+- id: miss-fill-by-year
+  tier: stretch
+  type: write
+  skill: mi-fill
+  data: stocks
+  prompt: "Make every year and quarter of stocks explicit, then carry the last known price forward, but never from one year into the next."
+  hint: "fill() respects groups. Group by year before filling, and ungroup after."
+  solution: |
+    stocks |>
+      complete(year, qtr) |>
+      group_by(year) |>
+      fill(price) |>
+      ungroup()
+
+- id: miss-zero-counts
+  tier: stretch
+  type: constrained
+  skill: mi-explicit
+  prompt: "From penguins, count the penguins of each species on each island, including the combinations with 0 penguins, without pivoting."
+  hint: "count() only creates rows for combinations that occur. complete() can add the others with n = 0."
+  solution: |
+    penguins |>
+      count(species, island) |>
+      complete(species, island, fill = list(n = 0))
+  forbid: ["pivot_wider", "pivot_longer"]
+
+- id: miss-never-maw
+  tier: brain-melter
+  type: write
+  skill: mi-explicit
+  data: fish_encounters
+  prompt: "Which fish were never recorded at the last station, MAW? Return a single column, fish."
+  hint: "A fish not seen at MAW has no MAW row at all. Make the absent rows explicit first, then look for NA."
+  solution: |
+    fish_encounters |>
+      complete(fish, station) |>
+      filter(station == "MAW", is.na(seen)) |>
+      select(fish)

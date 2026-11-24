@@ -360,11 +360,13 @@ local(envir = .leetr, {
     df[sort(sample.int(nrow(df), floor(nrow(df) / 2))), , drop = FALSE]
   }
 
-  # opts: data ("penguins"), ignore_row_order, forbid, require, robust.
+  # opts: data ("penguins"), ignore_row_order, ignore_column_order, forbid,
+  # require, robust.
   # Returns the same shape as grade(), so the app shows both kinds alike.
   grade_snippet <- function(user_code, solution_code, opts = list()) {
     result <- list(passed = FALSE, structure = list(), cases = list(), error = NULL)
-    cmp_opts <- list(row_order = if (isTRUE(opts$ignore_row_order)) "ignore" else "strict")
+    cmp_opts <- list(row_order = if (isTRUE(opts$ignore_row_order)) "ignore" else "strict",
+                     column_order = if (isTRUE(opts$ignore_column_order)) "ignore" else "strict")
 
     rules <- token_problems(user_code, unlist(opts$forbid), unlist(opts$require))
     if (!is.null(rules$parse_error)) {
@@ -373,9 +375,12 @@ local(envir = .leetr, {
     }
     result$structure <- as.list(rules$problems)
 
-    check <- function(name, data) {
+    # `optional`: on a data sample the reference itself may fail (a small
+    # table can lose a whole group); then that check is skipped, not failed.
+    check <- function(name, data, optional = FALSE) {
       want <- safe_snippet(solution_code, data)
       if (!is.null(want$error)) {
+        if (optional) return(NULL)
         stop(sprintf("The reference solution failed on '%s': %s", name, conditionMessage(want$error)))
       }
       got <- safe_snippet(user_code, data)
@@ -398,14 +403,14 @@ local(envir = .leetr, {
       if (!is.null(sub)) {
         again <- check(sprintf("Same code on a different sample of %s (%d of %d rows)",
                                data_name, nrow(sub), nrow(original)),
-                       stats::setNames(list(sub), data_name))
-        if (again$status == "fail") {
+                       stats::setNames(list(sub), data_name), optional = TRUE)
+        if (!is.null(again) && again$status == "fail") {
           again$detail <- paste0(
             "Your code matches on the full data but not on a sample of it. ",
             "Does it depend on specific values or rows instead of computing them?\n\n",
             again$detail)
         }
-        result$cases[[2]] <- again
+        if (!is.null(again)) result$cases[[2]] <- again
       }
     }
 

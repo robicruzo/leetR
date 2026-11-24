@@ -1,0 +1,100 @@
+- id: wider-table2
+  tier: warm-up
+  type: write
+  skill: pw-shape
+  data: table2
+  prompt: "Make table2 wide: one column for cases and one for population."
+  hint: "The new column names come from type, the cells from count."
+  solution: |
+    table2 |>
+      pivot_wider(names_from = type, values_from = count)
+
+- id: wider-fish-zero
+  tier: warm-up
+  type: write
+  skill: pw-fill
+  data: fish_encounters
+  prompt: "Make fish_encounters wide: one row per fish, one column per station, with 0 where the fish was not seen."
+  hint: "values_fill sets what goes in a cell that has no row."
+  solution: |
+    fish_encounters |>
+      pivot_wider(names_from = station, values_from = seen, values_fill = 0)
+
+- id: wider-rent-income
+  tier: core
+  type: write
+  skill: pw-ids
+  data: us_rent_income
+  prompt: "From us_rent_income, one row per state (NAME) with the estimate for income and for rent in their own columns."
+  hint: "moe and GEOID also count as ids. Keep only the columns that should decide the rows."
+  solution: |
+    us_rent_income |>
+      select(NAME, variable, estimate) |>
+      pivot_wider(names_from = variable, values_from = estimate)
+
+- id: wider-fix-swapped
+  tier: core
+  type: fix
+  skill: pw-shape
+  data: table2
+  prompt: "This should give columns country, year, cases and population. Fix it."
+  hint: "Which column holds the future column names, and which holds the numbers?"
+  starter: |
+    table2 |>
+      pivot_wider(names_from = count, values_from = type)
+  solution: |
+    table2 |>
+      pivot_wider(names_from = type, values_from = count)
+
+- id: wider-island-species
+  tier: core
+  type: write
+  skill: pw-dup
+  prompt: "From penguins, a table of counts: one row per island, one column per species, and 0 where a species never lives on that island."
+  hint: "Count first, so each island and species has one number. Then widen and fill."
+  solution: |
+    penguins |>
+      count(island, species) |>
+      pivot_wider(names_from = species, values_from = n, values_fill = 0)
+  compare: {ignore_row_order: true, ignore_column_order: true}
+
+- id: wider-mass-by-sex
+  tier: stretch
+  type: write
+  skill: pw-dup
+  prompt: "From penguins with known sex, the mean body mass for each island (rows) and sex (columns female and male)."
+  hint: "Filter out the unknown sex, summarise to one mean per island and sex, then widen by sex."
+  solution: |
+    penguins |>
+      filter(!is.na(sex)) |>
+      summarise(mass = mean(body_mass_g), .by = c(island, sex)) |>
+      pivot_wider(names_from = sex, values_from = mass)
+  compare: {ignore_row_order: true, ignore_column_order: true}
+
+- id: wider-fish-na
+  tier: stretch
+  type: predict
+  skill: pw-fill
+  data: fish_encounters
+  prompt: "fish_encounters has 114 rows: 19 fish and 11 stations, with a row only where a fish was seen. How many NA cells does this create?"
+  code: |
+    fish_encounters |>
+      pivot_wider(names_from = station, values_from = seen)
+  options: ["95", "0", "209", "114"]
+  verify: 'sum(is.na(result))'
+  explain: "19 fish × 11 stations = 209 cells, and 114 have a row. The other 95 combinations had no row, so they become NA."
+
+- id: wider-rate-grid
+  tier: brain-melter
+  type: write
+  skill: pw-ids
+  data: table1
+  prompt: >-
+    From table1, a grid of rates per 10,000 people: one row per year and one
+    column per country (columns year, Afghanistan, Brazil, China).
+  hint: "Compute the rate, then keep only year, country and rate. cases and population would otherwise act as ids."
+  solution: |
+    table1 |>
+      mutate(rate = cases / population * 10000) |>
+      select(year, country, rate) |>
+      pivot_wider(names_from = country, values_from = rate)

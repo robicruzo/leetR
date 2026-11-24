@@ -22,3 +22,11 @@ penguins_sample <- local({
   rows <- c(1, 277, 153, 21, 4, 278, 31, 154)
   penguins[rows, ] |> mutate(.id = as.character(rows))
 })
+
+# A small quarterly price table with both kinds of missing value (after r4ds
+# 18.3): 2020 Q4 is an explicit NA, and 2021 Q1 has no row at all.
+stocks <- tibble(
+  year  = c(2020, 2020, 2020, 2020, 2021, 2021, 2021),
+  qtr   = c(1, 2, 3, 4, 2, 3, 4),
+  price = c(1.88, 0.59, 0.35, NA, 0.92, 0.17, 2.66)
+)

@@ -137,7 +137,10 @@
 				<details>
 					<summary>Expected result</summary>
 					<p class="small">
-						{ch.dims ?? ''}{ch.compare?.ignore_row_order ? ' · row order is not checked' : ''}
+						{ch.dims ?? ''}{ch.compare?.ignore_row_order ? ' · row order is not checked' : ''}{ch.compare
+							?.ignore_column_order
+							? ' · column order is not checked'
+							: ''}
 					</p>
 					<pre>{ch.expected}</pre>
 				</details>

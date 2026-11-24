@@ -1,0 +1,71 @@
+id: 04-separate-unite
+title: "separate_wider_*() and unite(): one cell, one value"
+key_idea: >-
+  When one cell holds two values, separate_wider_delim() cuts it into
+  columns at a delimiter, and separate_longer_delim() cuts it into rows.
+  The pieces are text until you convert them. unite() goes the other way,
+  gluing columns into one with a separator. If a cell has more or fewer
+  pieces than you named, tidyr stops and asks what you want.
+subskills:
+  - {id: su-split, name: "Split one column into several at a delimiter"}
+  - {id: su-types, name: "Pieces are text until you convert them"}
+  - {id: su-unite, name: "unite() glues columns, with \"_\" by default"}
+  - {id: su-too, name: "too_few / too_many: when pieces don't fit"}
+readings:
+  - {label: "r4ds 14.4, Extracting data from strings", url: "https://r4ds.hadley.nz/strings.html#extracting-data-from-strings"}
+  - {label: "tidyr: separate_wider_delim()", url: "https://tidyr.tidyverse.org/reference/separate_wider_delim.html"}
+  - {label: "STAT 7500 primer ch. 9 (cleaning)", url: ""}
+
+predict:
+  skill: su-types
+  code: |
+    table3 |>
+      separate_wider_delim(rate, delim = "/",
+                           names = c("cases", "population"))
+  ask: "rate holds text like \"745/19987071\". After the split, what type is the new cases column?"
+  show_data: true
+  options:
+    - {choice: "character", correct: true}
+    - choice: "integer"
+      misconception: split-converts
+      probe: "The text \"745/19987071\" was cut at the slash. What kind of value is each piece of a piece of text?"
+    - choice: "double"
+      misconception: split-converts
+      probe: "Did anything in the call ask R to read the pieces as numbers?"
+  verify: 'class(result$cases)'
+
+probes:
+  - id: p-too-many
+    skill: su-too
+    ask: "tibble(x = \"1-2-3\") |> separate_wider_delim(x, delim = \"-\", names = c(\"a\", \"b\")) does what?"
+    options:
+      - {choice: "Stops with an error that suggests too_many", correct: true}
+      - choice: "Returns a = 1, b = 2 and drops the 3"
+        misconception: silent-drop
+        probe: "Would tidyr throw away part of your data without telling you?"
+      - choice: "Returns a = 1, b = \"2-3\""
+        misconception: rest-merged
+        probe: "That is what too_many = \"merge\" asks for. Is it what happens when you ask for nothing?"
+    right_followup: "Are you sure? Then what do too_many = \"drop\" and too_many = \"merge\" each return?"
+    explain: >-
+      separate_wider_delim() refuses to guess. With more pieces than names it
+      errors and points you to too_many ("drop" or "merge"); with fewer, to
+      too_few ("align_start" or "align_end"), which fill the gaps with NA.
+    verify: 'inherits(tryCatch(tidyr::separate_wider_delim(tibble::tibble(x = "1-2-3"), x, delim = "-", names = c("a", "b")), error = function(e) e), "error")'
+  - id: p-unite-sep
+    skill: su-unite
+    ask: "table5 has century \"19\" and year \"99\" in its first row. What is year after unite(\"year\", century, year)?"
+    options:
+      - {choice: "19_99", correct: true}
+      - choice: "1999"
+        misconception: unite-no-sep
+        probe: "What does unite() put between the pieces unless you say otherwise?"
+      - choice: "118"
+        misconception: unite-adds
+        probe: "Are century and year numbers or text in table5? Does unite() do arithmetic?"
+    right_followup: "Are you sure? How do you get 1999, and as a number?"
+    explain: >-
+      unite() pastes with sep = "_" by default and keeps the result as text.
+      unite("year", century, year, sep = "") gives "1999", and as.integer()
+      or readr::parse_number() makes it a number.
+    verify: 'tidyr::unite(table5, "year", century, year)$year[1]'

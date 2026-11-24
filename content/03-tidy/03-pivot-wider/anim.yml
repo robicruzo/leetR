@@ -1,0 +1,30 @@
+data: table2
+steps:
+  - code: ""
+    show: table2
+    tint: country
+    caption: "table2: each country and year takes two rows, one for cases and one for population."
+  - code: 'pivot_wider(names_from = type, values_from = count)'
+    widen: {names: type, values: count}
+    tint: country
+    caption: "The values of type become two new columns. Each pair of rows with the same country and year merges, and each count tile moves into its column."
+    skill: pw-shape
+  - from_data: true
+    code: 'filter(!(country == "Brazil" & year == 2000 & type == "cases"))'
+    tint: country
+    caption: "Suppose one number was never recorded: Brazil's cases for 2000 has no row at all."
+  - code: 'pivot_wider(names_from = type, values_from = count)'
+    widen: {names: type, values: count}
+    tint: country
+    caption: "No row, no tile: that cell becomes NA. Widening turned a missing row into a visible missing value."
+    skill: pw-fill
+  - from_data: true
+    code: 'select(-year)'
+    tint: country
+    caption: "Now drop year. country is the only column left to tell rows apart."
+  - code: 'pivot_wider(names_from = type, values_from = count, values_fn = list)'
+    show: 'pivot_wider(names_from = type, values_from = count)'
+    widen: {names: type, values: count}
+    tint: country
+    caption: "Each country has two cases values but one cell. pivot_wider() warns and keeps both as a list (<dbl [2]>). Summarise first to get one value per cell."
+    skill: pw-ids
