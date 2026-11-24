@@ -1,0 +1,26 @@
+data: penguins_sample |> select(species, mass = body_mass_g, flipper = flipper_length_mm)
+steps:
+  - code: ""
+    show: |
+      penguins_sample |>
+        select(species, mass = body_mass_g, flipper = flipper_length_mm)
+    caption: "Two measurements, shortened to mass and flipper so the animation fits. One penguin is missing both."
+  - code: 'summarise(across(c(mass, flipper), \(x) mean(x, na.rm = TRUE)))'
+    merge: {by: [], pour: {mass: mass, flipper: flipper}}
+    caption: "across() runs the same function on each selected column: two means, one row. Each result keeps its column's name."
+    skill: x-many
+  - from_data: true
+    code: 'summarise(across(c(mass, flipper), \(x) mean(x, na.rm = TRUE)), .by = species)'
+    merge: {by: [species], pour: {mass: mass, flipper: flipper}}
+    tint: species
+    caption: "Add .by and the same two means are computed once per species."
+  - from_data: true
+    code: 'mutate(across(where(is.numeric), \(x) x / max(x, na.rm = TRUE)))'
+    caption: "Inside mutate(), across() overwrites each column in place. where(is.numeric) chose the columns; each is divided by its own maximum."
+    skill: x-select
+  - from_data: true
+    code: 'summarise(across(c(mass, flipper), list(mean = \(x) mean(x, na.rm = TRUE), max = \(x) max(x, na.rm = TRUE)), .names = "{.fn}_{.col}"), .by = species)'
+    merge: {by: [species], pour: {mean_mass: mass, mean_flipper: flipper}}
+    tint: species
+    caption: "A named list of functions gives one column per function per column. .names = \"{.fn}_{.col}\" builds names like mean_mass."
+    skill: x-names

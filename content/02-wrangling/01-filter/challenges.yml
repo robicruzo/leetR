@@ -1,0 +1,89 @@
+- id: filter-gentoo
+  tier: warm-up
+  type: write
+  skill: f-cond
+  prompt: "Keep only the Gentoo penguins."
+  hint: "species is a factor, but you can compare it to a string with ==."
+  solution: |
+    penguins |>
+      filter(species == "Gentoo")
+
+- id: filter-fix-equals
+  tier: warm-up
+  type: fix
+  skill: f-eq
+  prompt: "This code should keep the penguins from Dream island. Fix it."
+  starter: |
+    penguins |>
+      filter(island = "Dream")
+  hint: "Read the error. One = names an argument; what tests equality?"
+  solution: |
+    penguins |>
+      filter(island == "Dream")
+
+- id: filter-heavy-females
+  tier: core
+  type: write
+  skill: f-combine
+  prompt: "Keep the female penguins that weigh more than 5,000 g."
+  hint: "Two conditions, both required."
+  solution: |
+    penguins |>
+      filter(sex == "female", body_mass_g > 5000)
+
+- id: filter-in
+  tier: core
+  type: constrained
+  skill: f-combine
+  prompt: "Keep the penguins from Biscoe or Dream, using %in% rather than |."
+  hint: "x %in% c(a, b) is TRUE when x is any of the values listed."
+  solution: |
+    penguins |>
+      filter(island %in% c("Biscoe", "Dream"))
+  require: ["%in%"]
+  forbid: ["|"]
+
+- id: filter-starwars-big
+  tier: core
+  type: write
+  skill: f-combine
+  data: starwars
+  prompt: "From starwars, keep the characters taller than 200 cm or heavier than 100 kg."
+  hint: "Either condition is enough, so you need | inside one condition."
+  solution: |
+    starwars |>
+      filter(height > 200 | mass > 100)
+
+- id: filter-unknown-sex
+  tier: stretch
+  type: write
+  skill: f-na
+  prompt: "Keep the penguins whose sex was not recorded."
+  hint: 'sex == NA will not work. Which function asks "is this missing?"'
+  solution: |
+    penguins |>
+      filter(is.na(sex))
+
+- id: filter-not-male
+  tier: stretch
+  type: predict
+  skill: f-na
+  prompt: 'penguins has 165 females, 168 males and 11 penguins of unknown sex. How many rows does this return?'
+  code: |
+    penguins |>
+      filter(sex != "male")
+  options: ["165", "176", "168"]
+  verify: "nrow(result)"
+  explain: 'For the 11 unknowns, NA != "male" is NA, so filter() drops them. Only the 165 females are left.'
+
+- id: filter-above-species-mean
+  tier: brain-melter
+  type: constrained
+  skill: f-cond
+  prompt: "Keep the penguins that are heavier than the average of their own species, in one filter() call and without group_by()."
+  hint: "filter() takes a .by argument, and mean() inside it is then computed per group."
+  solution: |
+    penguins |>
+      filter(body_mass_g > mean(body_mass_g, na.rm = TRUE), .by = species)
+  forbid: ["group_by"]
+  compare: {ignore_row_order: true}

@@ -1,0 +1,27 @@
+data: penguins_sample |> select(species, bill_length_mm, flipper_length_mm, body_mass_g, sex)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "Five columns of the eight penguins."
+  - code: 'select(species, ends_with("_mm"))'
+    caption: "select() keeps the columns you ask for and drops the rest. ends_with(\"_mm\") matches both measurements in millimetres."
+    skill: s-helpers
+  - code: "rename(flipper = flipper_length_mm)"
+    renames: {flipper: flipper_length_mm}
+    caption: "rename() changes a name and nothing else: same column, same values, new label. The new name goes on the left."
+    skill: s-rename
+  - from_data: true
+    code: "select(-sex)"
+    caption: "A minus sign drops a column and keeps all the others."
+    skill: s-neg
+  - from_data: true
+    code: "select(sex, everything())"
+    caption: "select() also sets the order. everything() means \"all the columns not yet named\", so sex moves to the front."
+    skill: s-cols
+  - from_data: true
+    code: "select(where(is.numeric))"
+    caption: "where() tests every column with a function. Only the numeric columns pass."
+  - from_data: true
+    code: "select(species, mass = body_mass_g)"
+    renames: {mass: body_mass_g}
+    caption: "select() can rename as it picks, but only the columns you mention survive."

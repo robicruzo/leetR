@@ -1,0 +1,88 @@
+- id: arrange-flipper
+  tier: warm-up
+  type: write
+  skill: a-order
+  prompt: "Sort the penguins from shortest to longest flipper."
+  hint: "arrange() sorts ascending unless told otherwise."
+  solution: |
+    penguins |>
+      arrange(flipper_length_mm)
+
+- id: slice-five-heaviest
+  tier: warm-up
+  type: write
+  skill: a-slice
+  prompt: "Return the 5 heaviest penguins."
+  hint: "One slice_*() function does it without arrange()."
+  solution: |
+    penguins |>
+      slice_max(body_mass_g, n = 5)
+
+- id: arrange-island-mass
+  tier: core
+  type: write
+  skill: a-desc
+  prompt: "Sort by island (A to Z), and within each island from heaviest to lightest."
+  hint: "Give arrange() two columns, and wrap the second in desc()."
+  solution: |
+    penguins |>
+      arrange(island, desc(body_mass_g))
+
+- id: slice-storms-wind
+  tier: core
+  type: write
+  skill: a-slice
+  data: storms
+  prompt: "From storms, return exactly 3 observations with the highest wind speed, even if more are tied."
+  hint: "slice_max() keeps ties by default. Look at its with_ties argument."
+  solution: |
+    storms |>
+      slice_max(wind, n = 3, with_ties = FALSE)
+
+- id: slice-mpg-best
+  tier: core
+  type: write
+  skill: a-slice
+  data: mpg
+  prompt: "From mpg, return the car with the best highway mileage in each class, keeping ties."
+  hint: "slice_max() with by = class."
+  solution: |
+    mpg |>
+      slice_max(hwy, n = 1, by = class)
+  compare: {ignore_row_order: true}
+
+- id: arrange-predict-na
+  tier: stretch
+  type: predict
+  skill: a-na
+  prompt: "What is the sex of the penguin in the last row?"
+  code: |
+    penguins |>
+      arrange(desc(sex)) |>
+      slice_tail(n = 1)
+  options: ["NA", "female", "male"]
+  verify: "result$sex"
+  explain: "desc() puts male before female, but missing values always go last, so the last row has sex NA."
+
+- id: slice-sample-seed
+  tier: stretch
+  type: write
+  skill: a-slice
+  prompt: "Draw a random sample of 10 penguins that is the same every time the code runs. Use the seed 7500."
+  hint: "set.seed() before the random draw makes it reproducible."
+  solution: |
+    set.seed(7500)
+    penguins |>
+      slice_sample(n = 10)
+
+- id: second-heaviest
+  tier: brain-melter
+  type: constrained
+  skill: a-desc
+  prompt: "Return the second-heaviest penguin of each species without using any slice_*() function."
+  hint: "Sort so the heaviest come first within each species, then keep the row whose position in its group is 2. row_number() works per group inside filter(.by = )."
+  solution: |
+    penguins |>
+      arrange(species, desc(body_mass_g)) |>
+      filter(row_number() == 2, .by = species)
+  forbid: ["slice_max", "slice_min", "slice_head", "slice_tail", "slice", "slice_sample"]

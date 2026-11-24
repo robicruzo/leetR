@@ -1,0 +1,68 @@
+id: 01-filter
+title: "filter(): keep the rows where a condition is TRUE"
+key_idea: >-
+  filter() evaluates a condition for every row and keeps only the rows where
+  it is TRUE. FALSE and NA rows both go.
+subskills:
+  - {id: f-cond, name: "A condition is one TRUE/FALSE/NA per row"}
+  - {id: f-na, name: "filter() drops NA as well as FALSE"}
+  - {id: f-combine, name: "Combining conditions: , & | %in%"}
+  - {id: f-eq, name: "== compares, = names an argument"}
+readings:
+  - {label: "r4ds 3.2, Rows", url: "https://r4ds.hadley.nz/data-transform.html#rows"}
+  - {label: "r4ds 12, Logical vectors", url: "https://r4ds.hadley.nz/logicals.html"}
+  - {label: "MDSR 4.1, filter()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6", url: ""}
+
+predict:
+  skill: f-na
+  code: |
+    penguins_sample |>
+      filter(body_mass_g > 3800)
+  ask: "Of these 8 penguins, how many rows come back?"
+  show_data: true
+  options:
+    - {choice: "3", correct: true}
+    - choice: "4"
+      misconception: na-kept
+      probe: "One penguin's mass is NA. Is NA > 3800 TRUE, FALSE, or something else?"
+    - choice: "5"
+      misconception: filter-removes-matches
+      probe: "Does filter() keep the rows that match the condition, or throw them away?"
+  verify: "nrow(result)"
+
+probes:
+  - id: p-filter-na
+    skill: f-na
+    ask: "Which condition keeps the female penguins and the penguins whose sex is unknown?"
+    options:
+      - choice: 'sex == "female" | sex == NA'
+        misconception: compare-to-na
+        probe: "What is NA == NA? If you know neither value, do you know they are equal?"
+      - choice: 'sex == "female" | is.na(sex)'
+        correct: true
+      - choice: 'sex != "male"'
+        misconception: na-not-equal-true
+        probe: 'What does NA != "male" return: TRUE, or NA?'
+    right_followup: 'Is that the only way? Try sex %in% c("female", NA): %in% matches NA to NA, so it works too.'
+    explain: >-
+      Any comparison with NA gives NA, and filter() drops NA rows. To ask about
+      missing values you need is.na(), which returns TRUE or FALSE, never NA.
+    verify: 'nrow(penguins |> dplyr::filter(sex == "female" | is.na(sex))) == 176'
+  - id: p-filter-comma
+    skill: f-combine
+    ask: 'In filter(penguins, species == "Adelie", island == "Dream"), what does the comma mean?'
+    options:
+      - choice: "Either condition can be TRUE"
+        misconception: comma-is-or
+        probe: "A Gentoo penguin on Dream island passes the second condition. Would it make sense for it to be kept?"
+      - choice: "Both conditions must be TRUE"
+        correct: true
+      - choice: "Only the last condition counts"
+        misconception: last-wins
+        probe: "If only the last condition counted, why would anyone write the first one?"
+    right_followup: "Are you sure? How would you write either condition, then?"
+    explain: >-
+      Separate conditions with commas are combined with &: a row is kept only
+      when every condition is TRUE. For either condition, use | inside one
+      condition.

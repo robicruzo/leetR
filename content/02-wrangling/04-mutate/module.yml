@@ -1,0 +1,68 @@
+id: 04-mutate
+title: "mutate(), if_else() and case_when(): compute new columns"
+key_idea: >-
+  mutate() adds or overwrites a column using a formula that runs on whole
+  columns at once, giving one value per row. if_else() chooses between two
+  outcomes; case_when() takes the first condition that is TRUE.
+subskills:
+  - {id: m-new, name: "mutate() adds or overwrites, one value per row"}
+  - {id: m-vec, name: "One formula runs on every row at once"}
+  - {id: m-ifelse, name: "if_else(): two outcomes, one type, NA stays NA"}
+  - {id: m-case, name: "case_when(): first TRUE wins, NA falls to .default"}
+readings:
+  - {label: "r4ds 3.3.1, mutate()", url: "https://r4ds.hadley.nz/data-transform.html#sec-mutate"}
+  - {label: "r4ds 12.5, Conditional transformations", url: "https://r4ds.hadley.nz/logicals.html#conditional-transformations"}
+  - {label: "MDSR 4.1, mutate()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6 and 9", url: ""}
+
+predict:
+  skill: m-ifelse
+  code: |
+    penguins_sample |>
+      mutate(size = if_else(body_mass_g > 4000, "large", "small"))
+  ask: "What is size for the penguin whose mass is missing?"
+  show_data: true
+  options:
+    - {choice: "NA", correct: true}
+    - choice: "small"
+      misconception: na-goes-false
+      probe: "if_else() picks \"small\" when the test is FALSE. Is NA > 4000 FALSE?"
+    - choice: "large"
+      misconception: na-goes-true
+      probe: "Would it make sense to call a penguin of unknown weight large?"
+  verify: "result$size[is.na(result$body_mass_g)]"
+
+probes:
+  - id: p-case-order
+    skill: m-case
+    ask: 'case_when(kg > 4 ~ "large", kg > 5 ~ "huge", .default = "small"). What does a 5.7 kg penguin get?'
+    options:
+      - {choice: "large", correct: true}
+      - choice: "huge"
+        misconception: most-specific-wins
+        probe: "case_when() checks its conditions from top to bottom. Which one does 5.7 meet first?"
+      - choice: "both"
+        misconception: many-values
+        probe: "A cell holds one value. If two conditions are TRUE, which one would case_when() write?"
+    right_followup: "Are you sure? Then can any penguin ever be labelled huge with this code? How would you fix it?"
+    explain: >-
+      case_when() stops at the first TRUE condition, so 5.7 > 4 wins and
+      "huge" is never reached. Put the most specific condition first.
+    verify: 'dplyr::case_when(5.7 > 4 ~ "large", 5.7 > 5 ~ "huge", .default = "small")'
+  - id: p-ifelse-types
+    skill: m-ifelse
+    ask: 'What does if_else(body_mass_g > 4000, "large", 0) do?'
+    options:
+      - {choice: "Raises an error", correct: true}
+      - choice: "Makes a column holding both \"large\" and 0"
+        misconception: mixed-column
+        probe: "A column has one type. Could it hold the text \"large\" and the number 0 without changing one of them?"
+      - choice: "Turns 0 into \"0\""
+        misconception: silent-coercion
+        probe: "That is what base R's ifelse() does. Why might if_else() refuse instead?"
+    right_followup: 'Are you sure? Then what does base ifelse() do with the same inputs?'
+    explain: >-
+      if_else() insists that both outcomes have the same type, so mixing text
+      and a number is an error. Base ifelse() silently turns 0 into "0",
+      which hides the mistake.
+    verify: 'inherits(tryCatch(dplyr::if_else(c(5000, 3000) > 4000, "large", 0), error = function(e) e), "error")'

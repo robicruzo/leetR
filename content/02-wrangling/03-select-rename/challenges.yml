@@ -1,0 +1,86 @@
+- id: select-three
+  tier: warm-up
+  type: write
+  skill: s-cols
+  prompt: "Keep only species, island and sex."
+  hint: "List the columns inside select()."
+  solution: |
+    penguins |>
+      select(species, island, sex)
+
+- id: select-drop-year
+  tier: warm-up
+  type: write
+  skill: s-neg
+  prompt: "Drop the year column and keep everything else."
+  hint: "A minus sign in front of a column name drops it."
+  solution: |
+    penguins |>
+      select(-year)
+
+- id: select-range
+  tier: core
+  type: write
+  skill: s-cols
+  prompt: "Keep every column from bill_length_mm to body_mass_g."
+  hint: "a:b selects a range of adjacent columns."
+  solution: |
+    penguins |>
+      select(bill_length_mm:body_mass_g)
+
+- id: select-colors
+  tier: core
+  type: write
+  skill: s-helpers
+  data: starwars
+  prompt: "From starwars, keep name and every column whose name contains \"color\"."
+  hint: "contains() matches part of a column name."
+  solution: |
+    starwars |>
+      select(name, contains("color"))
+
+- id: rename-mass
+  tier: core
+  type: constrained
+  skill: s-rename
+  prompt: "Rename body_mass_g to mass_g and keep every column."
+  hint: "Use the verb that keeps all columns. New name on the left."
+  solution: |
+    penguins |>
+      rename(mass_g = body_mass_g)
+  forbid: ["select"]
+
+- id: select-sex-first
+  tier: stretch
+  type: write
+  skill: s-cols
+  prompt: "Move sex to be the first column and keep the other columns in their original order."
+  hint: "everything() stands for all the columns you have not named yet."
+  solution: |
+    penguins |>
+      select(sex, everything())
+
+- id: select-predict-lists
+  tier: stretch
+  type: predict
+  skill: s-helpers
+  data: starwars
+  prompt: "starwars stores films, vehicles and starships as list-columns. How many columns does this return?"
+  code: |
+    starwars |>
+      select(where(is.list)) |>
+      ncol()
+  options: ["3", "0", "1"]
+  verify: "result"
+  explain: "where(is.list) tests every column, and the three list-columns (films, vehicles, starships) pass."
+
+- id: select-alphabetical
+  tier: brain-melter
+  type: constrained
+  skill: s-cols
+  prompt: "Return penguins with its columns in alphabetical order, without typing any column name."
+  hint: "names() gives the column names as a character vector, and all_of() lets select() take one."
+  solution: |
+    penguins |>
+      select(all_of(sort(names(penguins))))
+  forbid: ["species", "island", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g", "sex", "year"]

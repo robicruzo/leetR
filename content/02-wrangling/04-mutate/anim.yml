@@ -1,0 +1,21 @@
+data: penguins_sample |> select(species, body_mass_g)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "Species and body mass for the eight penguins."
+  - code: "mutate(kg = body_mass_g / 1000)"
+    caption: "One formula, applied to the whole column at once: every row gets its own kg. NA in, NA out."
+    skill: m-vec
+  - code: 'mutate(size = if_else(kg > 4, "large", "small"))'
+    caption: "if_else() writes \"large\" where the test is TRUE and \"small\" where it is FALSE. The NA test gives NA."
+    skill: m-ifelse
+  - code: 'mutate(size = case_when(kg > 5 ~ "huge", kg > 4 ~ "large", .default = "small"))'
+    caption: "Reusing the name size overwrites the column. Look at the NA row: no condition is TRUE, so case_when() falls through to .default and calls it \"small\"."
+    skill: m-case
+  - code: 'mutate(size = case_when(is.na(kg) ~ "unknown", kg > 5 ~ "huge", kg > 4 ~ "large", .default = "small"))'
+    caption: "Ask about NA first and the unknown penguin is labelled honestly."
+  - from_data: true
+    code: "mutate(above_avg = body_mass_g > mean(body_mass_g, na.rm = TRUE), .by = species)"
+    tint: species
+    caption: "With .by, mean() is computed within each species, so each penguin is compared with its own species. mutate() never changes the number of rows."
+    skill: m-new

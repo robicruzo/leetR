@@ -1,0 +1,63 @@
+id: 03-select-rename
+title: "select() and rename(): choose and name columns"
+key_idea: >-
+  select() keeps the columns you name, in the order you name them, and drops
+  the rest. rename() changes names and keeps every column. In both, the new
+  name goes on the left.
+subskills:
+  - {id: s-cols, name: "Pick columns by name, range or position"}
+  - {id: s-helpers, name: "Helpers: starts_with, ends_with, contains, where"}
+  - {id: s-neg, name: "Drop columns with -"}
+  - {id: s-rename, name: "rename(new = old), and renaming inside select()"}
+readings:
+  - {label: "r4ds 3.3, Columns", url: "https://r4ds.hadley.nz/data-transform.html#columns"}
+  - {label: "MDSR 4.1, select()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6", url: ""}
+
+predict:
+  skill: s-helpers
+  code: |
+    penguins |>
+      select(species, ends_with("_mm"))
+  ask: "penguins has 8 columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex and year. How many columns come back?"
+  options:
+    - {choice: "4", correct: true}
+    - choice: "2"
+      misconception: helper-picks-one
+      probe: "ends_with() is a test applied to every column name. How many names pass it?"
+    - choice: "5"
+      misconception: unit-confusion
+      probe: 'Look at the last three characters of body_mass_g. Are they "_mm"?'
+  verify: "ncol(result)"
+
+probes:
+  - id: p-rename-side
+    skill: s-rename
+    ask: "In rename(flipper = flipper_length_mm), which side is the new name?"
+    options:
+      - {choice: "The left side", correct: true}
+      - choice: "The right side"
+        misconception: rename-old-first
+        probe: "In mutate(total = x + y), which side names the column being created?"
+    right_followup: "Are you sure? Then what does select(species, flipper = flipper_length_mm) return?"
+    explain: >-
+      Throughout dplyr, new = old: the name on the left is the one you are
+      creating. select() can rename too, but it then drops every column you
+      did not mention.
+  - id: p-select-numeric
+    skill: s-helpers
+    ask: "Which line keeps every numeric column?"
+    options:
+      - {choice: "select(where(is.numeric))", correct: true}
+      - choice: "select(is.numeric())"
+        misconception: call-the-predicate
+        probe: "is.numeric() needs something to test. When you write is.numeric() with nothing inside, what is it testing?"
+      - choice: "select(numeric)"
+        misconception: type-as-name
+        probe: "Bare words inside select() are column names. Does penguins have a column called numeric?"
+    right_followup: "Are you sure? Is year numeric? Would it be kept?"
+    explain: >-
+      where() takes a function, without calling it, and applies it to each
+      column; the columns for which it returns TRUE are kept. year is an
+      integer column, so it is numeric and is kept too.
+    verify: "ncol(penguins |> dplyr::select(dplyr::where(is.numeric))) == 5"

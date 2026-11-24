@@ -1,0 +1,27 @@
+data: penguins_sample |> select(species, sex, body_mass_g)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "Eight penguins with their species, sex and body mass in grams. One mass is missing."
+  - code: "mutate(`body_mass_g > 3800` = body_mass_g > 3800)"
+    show: "body_mass_g > 3800"
+    caption: "First R evaluates the condition for every row: one TRUE, FALSE or NA each. (This helper column is only for show.)"
+    skill: f-cond
+  - code: "filter(`body_mass_g > 3800`)"
+    show: |
+      penguins_sample |>
+        filter(body_mass_g > 3800)
+    caption: "filter() keeps only the TRUE rows. The FALSE rows go, and so does the NA row: NA means \"unknown\", and filter() keeps only what it knows is TRUE."
+    skill: f-na
+  - code: "select(-`body_mass_g > 3800`)"
+    show: |
+      penguins_sample |>
+        filter(body_mass_g > 3800)
+    caption: "The real result: 3 rows, with the columns unchanged. filter() never adds or removes columns."
+  - from_data: true
+    code: "filter(body_mass_g > 3800 | is.na(body_mass_g))"
+    caption: "To keep the unknowns, ask for them. is.na() is TRUE for the missing mass, so that row now passes."
+  - from_data: true
+    code: 'filter(sex == "female", body_mass_g < 3600)'
+    caption: "Two conditions separated by a comma must both be TRUE. Only the lighter females are left."
+    skill: f-combine

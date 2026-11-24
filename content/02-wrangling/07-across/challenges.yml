@@ -1,0 +1,91 @@
+- id: across-numeric-means
+  tier: warm-up
+  type: write
+  skill: x-many
+  prompt: "Return the mean of every numeric column of penguins, ignoring missing values."
+  hint: "where(is.numeric) picks the columns; the function needs na.rm = TRUE."
+  solution: |
+    penguins |>
+      summarise(across(where(is.numeric), \(x) mean(x, na.rm = TRUE)))
+
+- id: across-round-bills
+  tier: warm-up
+  type: write
+  skill: x-select
+  prompt: "Round bill_length_mm and bill_depth_mm to whole numbers, keeping every column."
+  hint: "mutate(across(...)) with a helper that matches both bill columns."
+  solution: |
+    penguins |>
+      mutate(across(starts_with("bill"), round))
+
+- id: across-species-mm
+  tier: core
+  type: write
+  skill: x-select
+  prompt: "For each species, return the mean of every column whose name ends in _mm."
+  hint: "ends_with(), a function with na.rm, and .by."
+  solution: |
+    penguins |>
+      summarise(across(ends_with("_mm"), \(x) mean(x, na.rm = TRUE)), .by = species)
+  compare: {ignore_row_order: true}
+
+- id: across-colors-distinct
+  tier: core
+  type: write
+  skill: x-many
+  data: starwars
+  prompt: "From starwars, return the number of distinct values in hair_color, skin_color and eye_color."
+  hint: "n_distinct is already a one-argument function, so it can be passed as it is."
+  solution: |
+    starwars |>
+      summarise(across(ends_with("color"), n_distinct))
+
+- id: across-count-missing
+  tier: core
+  type: write
+  skill: x-args
+  prompt: "Count the missing values in every column of penguins."
+  hint: "sum(is.na(x)) counts the NAs in one column. Wrap it in \\(x)."
+  solution: |
+    penguins |>
+      summarise(across(everything(), \(x) sum(is.na(x))))
+
+- id: across-min-max
+  tier: stretch
+  type: write
+  skill: x-names
+  prompt: "For each species, return the minimum and maximum of body_mass_g and flipper_length_mm, with names like min_body_mass_g."
+  hint: 'A named list of two functions, and .names = "{.fn}_{.col}".'
+  solution: |
+    penguins |>
+      summarise(across(c(body_mass_g, flipper_length_mm),
+                       list(min = \(x) min(x, na.rm = TRUE),
+                            max = \(x) max(x, na.rm = TRUE)),
+                       .names = "{.fn}_{.col}"),
+                .by = species)
+  compare: {ignore_row_order: true}
+
+- id: across-fix-call
+  tier: stretch
+  type: fix
+  skill: x-args
+  prompt: "This should return the mean of every numeric column, ignoring NAs, but it errors. Fix it."
+  starter: |
+    penguins |>
+      summarise(across(where(is.numeric), mean(na.rm = TRUE)))
+  hint: "across() needs a function, not a call. Read the error: which argument is missing?"
+  solution: |
+    penguins |>
+      summarise(across(where(is.numeric), \(x) mean(x, na.rm = TRUE)))
+
+- id: across-center
+  tier: brain-melter
+  type: constrained
+  skill: x-many
+  prompt: "Centre bill_length_mm through body_mass_g within each species (subtract that species' mean from every value), in one mutate() and without group_by()."
+  hint: "across() inside mutate(), with .by on the mutate()."
+  solution: |
+    penguins |>
+      mutate(across(bill_length_mm:body_mass_g, \(x) x - mean(x, na.rm = TRUE)),
+             .by = species)
+  forbid: ["group_by"]

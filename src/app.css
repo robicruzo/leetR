@@ -1,0 +1,203 @@
+:root {
+	--bg: #f6f7f9;
+	--panel: #ffffff;
+	--editor-bg: #ffffff;
+	--border: #e2e5ea;
+	--text: #1b1f27;
+	--muted: #6b7280;
+	--accent: #2563eb;
+	--accent-text: #ffffff;
+	--active-line: #f3f5f8;
+	--selection: #cfe0ff;
+	--code-bg: #f1f3f6;
+	--pass: #16a34a;
+	--fail: #dc2626;
+	--warn: #d97706;
+	--easy: #16a34a;
+	--medium: #d97706;
+	--hard: #dc2626;
+	--syn-keyword: #8b2fc9;
+	--syn-atom: #0b6bcb;
+	--syn-number: #b45309;
+	--syn-string: #15803d;
+	--syn-operator: #9333ea;
+	--mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+	/* Lessons: the animation tray, and palmerpenguins' species colours. */
+	--tray: #eef1f5;
+	--adelie: #ff8c00;
+	--chinstrap: #a020f0;
+	--gentoo: #008b8b;
+	color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #14171c;
+		--panel: #1b1f27;
+		--editor-bg: #171a21;
+		--border: #2b313c;
+		--text: #e6e8ec;
+		--muted: #8b93a1;
+		--accent: #6ea8ff;
+		--accent-text: #0b1220;
+		--active-line: #1f242d;
+		--selection: #2c3f63;
+		--code-bg: #222731;
+		--pass: #4ade80;
+		--fail: #f87171;
+		--warn: #fbbf24;
+		--easy: #4ade80;
+		--medium: #fbbf24;
+		--hard: #f87171;
+		--syn-keyword: #c792ea;
+		--syn-atom: #82aaff;
+		--syn-number: #f78c6c;
+		--syn-string: #c3e88d;
+		--syn-operator: #89ddff;
+		--tray: #11151b;
+		--chinstrap: #c06cf5;
+		--gentoo: #1fb5b5;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font: 15px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+a {
+	color: var(--accent);
+}
+
+code,
+pre {
+	font-family: var(--mono);
+	font-size: 0.88em;
+}
+
+:not(pre) > code {
+	background: var(--code-bg);
+	padding: 0.1em 0.35em;
+	border-radius: 4px;
+}
+
+pre {
+	background: var(--code-bg);
+	padding: 0.75rem 1rem;
+	border-radius: 6px;
+	overflow-x: auto;
+	line-height: 1.45;
+}
+
+button {
+	font: inherit;
+	cursor: pointer;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--text);
+	padding: 0.4rem 0.9rem;
+}
+
+button:hover:not(:disabled) {
+	border-color: var(--muted);
+}
+
+button.primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+	font-weight: 600;
+}
+
+button:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.difficulty {
+	font-size: 0.78rem;
+	font-weight: 600;
+	text-transform: capitalize;
+}
+.difficulty.easy {
+	color: var(--easy);
+}
+.difficulty.medium {
+	color: var(--medium);
+}
+.difficulty.hard {
+	color: var(--hard);
+}
+
+/* Shared by lesson pages. */
+.card {
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 1.1rem 1.25rem;
+	margin: 0 0 1.25rem;
+}
+.card > h2 {
+	margin: 0 0 0.6rem;
+	font-size: 1.15rem;
+}
+.lede {
+	color: var(--muted);
+	font-size: 1.05rem;
+	max-width: 68ch;
+}
+.small {
+	font-size: 0.85rem;
+	color: var(--muted);
+}
+.btn {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--text);
+	padding: 0.45rem 0.95rem;
+	text-decoration: none;
+	font-weight: 500;
+}
+.btn:hover {
+	border-color: var(--muted);
+}
+.btn.primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+	font-weight: 600;
+}
+.ok-text {
+	color: var(--pass);
+}
+.bad-text {
+	color: var(--fail);
+}
+.tier {
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.05rem 0.5rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	color: var(--muted);
+	white-space: nowrap;
+}
+.tier.stretch {
+	border-color: var(--adelie);
+	color: var(--adelie);
+}
+.tier.brain-melter {
+	border-color: var(--chinstrap);
+	color: var(--chinstrap);
+}

@@ -1,0 +1,70 @@
+id: 05-summarise
+title: "summarise(): collapse a column into one number"
+key_idea: >-
+  Without groups, summarise() collapses the whole table into a single row
+  holding only the summaries you name. A single NA makes most summaries NA
+  unless you pass na.rm = TRUE.
+subskills:
+  - {id: su-collapse, name: "summarise() returns one row, only the summaries"}
+  - {id: su-name, name: "Name every summary"}
+  - {id: su-na, name: "One NA spoils the summary; na.rm = TRUE"}
+  - {id: su-funs, name: "n(), n_distinct(), and mean() of a condition"}
+  - {id: su-one, name: "One value per summary; reframe() for more"}
+readings:
+  - {label: "r4ds 3.5.2, summarize()", url: "https://r4ds.hadley.nz/data-transform.html#sec-summarize"}
+  - {label: "r4ds 13, Numbers", url: "https://r4ds.hadley.nz/numbers.html"}
+  - {label: "MDSR 4.1, summarize()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6", url: ""}
+
+predict:
+  skill: su-na
+  code: |
+    penguins_sample |>
+      summarise(mean_mass = mean(body_mass_g))
+  ask: "What does this return?"
+  show_data: true
+  options:
+    - {choice: "One row holding NA", correct: true}
+    - choice: "One row holding 4000, the mean of the 7 known masses"
+      misconception: mean-skips-na
+      probe: "If one of eight numbers is unknown, do you know their mean?"
+    - choice: "8 rows, each with the overall mean"
+      misconception: summarise-keeps-rows
+      probe: "summarise() summarises. How many rows does one summary of a whole column need?"
+  verify: 'if (nrow(result) == 1 && is.na(result$mean_mass)) "One row holding NA" else "other"'
+
+probes:
+  - id: p-mean-logical
+    skill: su-funs
+    ask: "summarise(heavy = mean(body_mass_g > 4000, na.rm = TRUE)) returns 0.503 for penguins. What does 0.503 mean?"
+    options:
+      - {choice: "50.3% of the penguins with a known mass weigh over 4,000 g", correct: true}
+      - choice: "The average mass of the penguins over 4,000 g, in kg"
+        misconception: mean-of-filtered
+        probe: "For one penguin, is body_mass_g > 4000 a mass, or TRUE/FALSE?"
+      - choice: "Nothing useful: you can't average TRUE and FALSE"
+        misconception: logical-not-numeric
+        probe: "What does R give for TRUE + TRUE + FALSE?"
+    right_followup: "Are you sure? Then what would sum(body_mass_g > 4000, na.rm = TRUE) give instead?"
+    explain: >-
+      In arithmetic, TRUE counts as 1 and FALSE as 0. So sum() of a condition
+      counts the rows where it holds, and mean() gives the share of rows
+      where it holds.
+    verify: "round(mean(penguins$body_mass_g > 4000, na.rm = TRUE), 3) == 0.503"
+  - id: p-reframe
+    skill: su-one
+    ask: "What happens with summarise(q = quantile(body_mass_g, c(0.25, 0.75), na.rm = TRUE))?"
+    options:
+      - {choice: "An error that points you to reframe()", correct: true}
+      - choice: "Two rows come back, with a warning"
+        misconception: old-dplyr-warning
+        probe: "summarise() promises exactly one row per group. Should a broken promise be a warning you can miss, or a stop?"
+      - choice: "One row holding both numbers in one cell"
+        misconception: cell-holds-many
+        probe: "A cell holds one value. Where would the second quantile go?"
+    right_followup: "Are you sure? Then what does reframe() promise that summarise() does not?"
+    explain: >-
+      summarise() must return exactly one row per group. Since dplyr 1.2.0,
+      breaking that rule is an error; in dplyr 1.1 it was only a warning.
+      reframe() is the verb for summaries that return any number of rows.
+    verify: 'inherits(tryCatch(penguins |> dplyr::summarise(q = quantile(body_mass_g, c(0.25, 0.75), na.rm = TRUE)), error = function(e) e), "error")'

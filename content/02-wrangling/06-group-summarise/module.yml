@@ -1,0 +1,74 @@
+id: 06-group-summarise
+title: "group_by() + summarise(): one row per group"
+key_idea: >-
+  group_by() changes nothing you can see except a Groups line; it tells
+  later verbs to work once per group. summarise() then returns one row per
+  group, holding only the group keys and the new summaries, and peels off
+  the last grouping key.
+subskills:
+  - {id: g-invisible, name: "group_by() changes nothing visible"}
+  - {id: g-collapse, name: "One row per group: keys + summaries only"}
+  - {id: g-peel, name: "summarise() peels off the last grouping key"}
+  - {id: g-count, name: "count() = group_by() + summarise(n = n())"}
+  - {id: g-by, name: ".by for one-off grouping"}
+readings:
+  - {label: "r4ds 3.5, Groups", url: "https://r4ds.hadley.nz/data-transform.html#groups"}
+  - {label: "MDSR 4.1.5, group_by()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6 and ch. 8 (group_by and count)", url: ""}
+
+predict:
+  skill: g-collapse
+  code: |
+    penguins_sample |>
+      group_by(species) |>
+      summarise(m = mean(body_mass_g, na.rm = TRUE))
+  ask: "The sample has 8 rows and 3 columns. What shape is the result?"
+  show_data: true
+  options:
+    - {choice: "3 × 2", correct: true}
+    - choice: "3 × 3"
+      misconception: summarise-keeps-columns
+      probe: "Adelie penguins in the sample live on three islands. Which island would go next to the one Adelie mean?"
+    - choice: "8 × 2"
+      misconception: summarise-keeps-rows
+      probe: "If every penguin kept its own row, where would the single Adelie mean go?"
+    - choice: "1 × 1"
+      misconception: keys-dropped
+      probe: "group_by(species) ran first. What does it tell summarise() to do once per…?"
+  verify: 'paste(nrow(result), "×", ncol(result))'
+
+probes:
+  - id: p-peel
+    skill: g-peel
+    ask: "After group_by(species, island) |> summarise(m = mean(body_mass_g, na.rm = TRUE)), what does mutate(share = m / sum(m)) divide by?"
+    options:
+      - choice: "The sum of all the group means"
+        misconception: grouping-gone
+        probe: "Look at the Groups line after summarise(). Which grouping is still active when mutate() runs?"
+      - {choice: "The sum of the means within the same species", correct: true}
+      - choice: "Nothing: m only exists inside summarise()"
+        misconception: columns-vanish
+        probe: "summarise() returned a table with a column m. Can the next verb in the pipe see it?"
+    right_followup: "Are you sure? Gentoo penguins only live on Biscoe. What is the Gentoo share, and why?"
+    explain: >-
+      summarise() removes only the last grouping key, island. The result is
+      still grouped by species, so sum(m) adds up the means within each
+      species. Add .groups = "drop" or ungroup() to divide by the grand total.
+  - id: p-count-same
+    skill: g-count
+    ask: "Which line returns exactly the same table as penguins |> count(species, sex)?"
+    options:
+      - choice: "group_by(species, sex) |> summarise(n = n())"
+        misconception: count-is-grouped
+        probe: "This result is still grouped by species. Is the result of count() grouped?"
+      - {choice: 'group_by(species, sex) |> summarise(n = n(), .groups = "drop")', correct: true}
+      - choice: "summarise(n = n(), .by = c(species, sex))"
+        misconception: by-sorts
+        probe: "group_by() sorts the groups. In what order does .by return them?"
+    right_followup: "Are you sure? So why does .by give a different table, even though every count is the same?"
+    explain: >-
+      count() sorts by its columns and returns an ungrouped table. group_by()
+      also sorts, but summarise() leaves one grouping layer behind unless you
+      drop it. .by never groups the result, but keeps the groups in the order
+      they first appear.
+    verify: 'isTRUE(all.equal(penguins |> dplyr::count(species, sex), penguins |> dplyr::group_by(species, sex) |> dplyr::summarise(n = dplyr::n(), .groups = "drop")))'

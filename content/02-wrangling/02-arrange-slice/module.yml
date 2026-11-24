@@ -1,0 +1,66 @@
+id: 02-arrange-slice
+title: "arrange() and slice_*(): order rows, then pick some"
+key_idea: >-
+  arrange() moves whole rows into a new order and changes nothing else.
+  The slice_*() family keeps rows by position or by value, so it changes
+  how many rows there are.
+subskills:
+  - {id: a-order, name: "arrange() moves whole rows, nothing else"}
+  - {id: a-desc, name: "desc() and tie-breaking columns"}
+  - {id: a-na, name: "NA always sorts last"}
+  - {id: a-slice, name: "slice_head/max/min/sample, overall and per group"}
+readings:
+  - {label: "r4ds 3.2.3, arrange()", url: "https://r4ds.hadley.nz/data-transform.html#arrange"}
+  - {label: "r4ds 3.5.3, slice_ functions", url: "https://r4ds.hadley.nz/data-transform.html#the-slice_-functions"}
+  - {label: "MDSR 4.1, arrange()", url: "https://mdsr-book.github.io/mdsr3e/04-dataI.html"}
+  - {label: "STAT 7500 primer ch. 6", url: ""}
+
+predict:
+  skill: a-na
+  code: |
+    penguins_sample |>
+      arrange(desc(body_mass_g))
+  ask: "Where does the penguin with the missing body mass end up?"
+  show_data: true
+  options:
+    - {choice: "Last row", correct: true}
+    - choice: "First row"
+      misconception: desc-flips-na
+      probe: "desc() flips the order of the values it can compare. Can it compare NA with 3750?"
+    - choice: "It is removed"
+      misconception: arrange-drops
+      probe: "Has arrange() ever changed how many rows a table has?"
+  verify: 'if (is.na(tail(result$body_mass_g, 1))) "Last row" else "Other"'
+
+probes:
+  - id: p-arrange-rows
+    skill: a-order
+    ask: "After arrange(body_mass_g), is each penguin's species still on the same row as its own body mass?"
+    options:
+      - {choice: "Yes, whole rows move together", correct: true}
+      - choice: "No, only body_mass_g is sorted"
+        misconception: arrange-is-sort
+        probe: "If only the mass column moved, which penguin would each mass belong to afterwards?"
+    right_followup: "Are you sure? Then what is the difference between arrange(df, x) and sort(df$x)?"
+    explain: >-
+      arrange() reorders rows, so every column moves together and each
+      penguin stays intact. sort() works on a single vector and returns just
+      that vector, sorted.
+  - id: p-slice-groups
+    skill: a-slice
+    ask: "Which line returns the 2 lightest penguins of each species?"
+    options:
+      - choice: "arrange(body_mass_g) |> slice_head(n = 2)"
+        misconception: slice-ignores-groups
+        probe: "With no groups, how many rows does slice_head(n = 2) return in total?"
+      - choice: "slice_min(body_mass_g, n = 2, by = species)"
+        correct: true
+      - choice: "slice_min(body_mass_g, n = 2) |> group_by(species)"
+        misconception: group-after
+        probe: "When slice_min() runs, does it know about species yet?"
+    right_followup: "Are you sure you always get exactly 6 rows? What if two Adelie penguins tie for second lightest?"
+    explain: >-
+      slice_min() picks rows per group only if it knows the groups when it
+      runs: give it by = species, or group_by() first. It keeps ties by
+      default, so a tie can return extra rows; with_ties = FALSE stops that.
+    verify: "nrow(penguins |> dplyr::slice_min(body_mass_g, n = 2, by = species)) == 6"

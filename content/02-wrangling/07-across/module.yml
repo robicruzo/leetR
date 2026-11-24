@@ -1,0 +1,68 @@
+id: 07-across
+title: "across(): one function, many columns"
+key_idea: >-
+  across() applies the same function to every column you select, inside
+  summarise() or mutate(). It takes a function to call later, not a call
+  to run now, so extra arguments go inside a small anonymous function.
+subskills:
+  - {id: x-many, name: "across() applies one function to many columns"}
+  - {id: x-select, name: "Choosing columns inside across()"}
+  - {id: x-names, name: "Naming outputs with .names"}
+  - {id: x-args, name: "Extra arguments with \\(x) f(x, ...)"}
+readings:
+  - {label: "r4ds 26.2, Modifying multiple columns", url: "https://r4ds.hadley.nz/iteration.html#modifying-multiple-columns"}
+  - {label: "MDSR 7.2, across()", url: "https://mdsr-book.github.io/mdsr3e/07-iteration.html"}
+  - {label: "STAT 7500 primer ch. 11", url: ""}
+
+predict:
+  skill: x-names
+  code: |
+    penguins |>
+      summarise(across(c(body_mass_g, flipper_length_mm), mean))
+  ask: "What are the names of the columns in the result?"
+  options:
+    - {choice: "body_mass_g, flipper_length_mm", correct: true}
+    - choice: "mean_body_mass_g, mean_flipper_length_mm"
+      misconception: auto-prefix
+      probe: "across() was not given any new names. What names could it reuse?"
+    - choice: "mean"
+      misconception: one-output
+      probe: "across() runs mean() once per selected column. How many results is that?"
+  verify: 'paste(names(result), collapse = ", ")'
+
+probes:
+  - id: p-lambda
+    skill: x-args
+    ask: "Why write across(cols, \\(x) mean(x, na.rm = TRUE)) rather than across(cols, mean(na.rm = TRUE))?"
+    options:
+      - {choice: "across() needs a function to call on each column; mean(na.rm = TRUE) runs mean() immediately, with no data", correct: true}
+      - choice: "Both work; the first is just faster"
+        misconception: both-work
+        probe: "Run mean(na.rm = TRUE) on its own. What is it taking the mean of?"
+      - choice: "\\(x) is needed because across() only accepts base R functions"
+        misconception: base-only
+        probe: "Earlier you passed n_distinct, a dplyr function, straight to across(). Did that work?"
+    right_followup: 'Are you sure? Then what does R say for summarise(across(where(is.numeric), mean(na.rm = TRUE)))?'
+    explain: >-
+      across() wants a function it can call once per column. mean is a
+      function; mean(na.rm = TRUE) is a call that runs straight away and fails
+      because x is missing. \(x) mean(x, na.rm = TRUE) builds a new
+      one-argument function that across() can call.
+    verify: 'inherits(tryCatch(penguins |> dplyr::summarise(dplyr::across(dplyr::where(is.numeric), mean(na.rm = TRUE))), error = function(e) e), "error")'
+  - id: p-names
+    skill: x-names
+    ask: 'For columns a and b, what names does across(c(a, b), mean, .names = "{.col}_avg") produce?'
+    options:
+      - {choice: "a_avg, b_avg", correct: true}
+      - choice: "avg_a, avg_b"
+        misconception: template-reversed
+        probe: "Read the template from left to right. What comes before the underscore?"
+      - choice: "{.col}_avg, {.col}_avg"
+        misconception: template-literal
+        probe: "The braces mark a slot. What do you think gets put into {.col}?"
+    right_followup: "Are you sure? With two functions in a list, which glue variable names the function?"
+    explain: >-
+      .names is a template: {.col} becomes each column's name and {.fn} the
+      name of each function in a list, so "{.fn}_{.col}" gives names like
+      mean_a.
+    verify: 'paste(names(data.frame(a = 1:2, b = 3:4) |> dplyr::summarise(dplyr::across(c(a, b), mean, .names = "{.col}_avg"))), collapse = ", ")'

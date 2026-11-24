@@ -1,0 +1,23 @@
+data: penguins_sample |> select(species, body_mass_g)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "Eight masses, one of them missing."
+  - code: "summarise(mean_mass = mean(body_mass_g))"
+    merge: {by: [], pour: {mean_mass: body_mass_g}}
+    caption: "All eight masses pour into one cell. One of them is unknown, so the mean is unknown too: NA. species has no single value, so it disappears."
+    skill: su-na
+  - from_data: true
+    code: "summarise(mean_mass = mean(body_mass_g, na.rm = TRUE))"
+    merge: {by: [], pour: {mean_mass: body_mass_g}}
+    caption: "na.rm = TRUE removes the NA before averaging. The mean of the 7 known masses is exactly 4,000 g."
+    skill: su-collapse
+  - from_data: true
+    code: "summarise(n = n(), heavy_share = mean(body_mass_g > 4000, na.rm = TRUE))"
+    merge: {by: [], pour: {"n": species, heavy_share: body_mass_g}}
+    caption: "Several summaries, one row. n() counts rows; mean() of a condition is the share where it is TRUE: 2 of the 7 known masses are over 4,000 g."
+    skill: su-funs
+  - from_data: true
+    code: "summarise(n = n(), missing = sum(is.na(body_mass_g)))"
+    merge: {by: [], pour: {"n": species, missing: body_mass_g}}
+    caption: "sum() of a condition counts it. is.na() is never NA itself, so no na.rm is needed."

@@ -1,0 +1,134 @@
+id: wrangling
+number: 2
+title: One-table wrangling
+summary: >-
+  The core dplyr verbs on a single table: keep rows, order them, pick columns,
+  compute new ones, and collapse groups into summaries.
+needs: [foundations]
+modules: [01-filter, 02-arrange-slice, 03-select-rename, 04-mutate, 05-summarise, 06-group-summarise, 07-across]
+
+# The diagnostic places each learner before any teaching. A correct answer
+# sets that subskill to level 1; the first module with a wrong answer is
+# suggested as the starting point.
+diagnostic:
+  - id: d-filter-na
+    skill: f-na
+    module: 01-filter
+    ask: "x is c(3, NA, 0). How many rows does filter(df, x > 1) return?"
+    options:
+      - {choice: "1", correct: true}
+      - {choice: "2", misconception: na-kept}
+      - {choice: "An error, because of the NA", misconception: na-errors}
+    verify: "nrow(dplyr::filter(data.frame(x = c(3, NA, 0)), x > 1))"
+  - id: d-arrange-na
+    skill: a-na
+    module: 02-arrange-slice
+    ask: "x is c(2, NA, 5). In what order does arrange(df, desc(x)) put the values?"
+    options:
+      - {choice: "5, 2, NA", correct: true}
+      - {choice: "NA, 5, 2", misconception: desc-flips-na}
+      - {choice: "5, NA, 2", misconception: na-is-middle}
+    verify: "paste(dplyr::arrange(data.frame(x = c(2, NA, 5)), dplyr::desc(x))$x, collapse = ', ')"
+  - id: d-case-order
+    skill: m-case
+    module: 04-mutate
+    ask: "case_when(x > 1 ~ \"a\", x > 5 ~ \"b\", .default = \"c\") gives what for x = 9?"
+    options:
+      - {choice: "a", correct: true}
+      - {choice: "b", misconception: most-specific-wins}
+      - {choice: "c", misconception: default-wins}
+    verify: "dplyr::case_when(9 > 1 ~ 'a', 9 > 5 ~ 'b', .default = 'c')"
+  - id: d-group-rows
+    skill: g-collapse
+    module: 06-group-summarise
+    ask: "penguins |> group_by(species) |> summarise(n = n()) returns how many rows?"
+    options:
+      - {choice: "3", correct: true}
+      - {choice: "344", misconception: summarise-keeps-rows}
+      - {choice: "1", misconception: groups-ignored}
+    verify: "nrow(penguins |> dplyr::group_by(species) |> dplyr::summarise(n = dplyr::n()))"
+  - id: d-across
+    skill: x-many
+    module: 07-across
+    ask: "Which line computes the mean of each of the columns a, b and c separately?"
+    options:
+      - {choice: "summarise(across(c(a, b, c), mean))", correct: true}
+      - {choice: "summarise(m = mean(c(a, b, c)))", misconception: one-mean-of-all}
+      - {choice: "summarise(m = mean(a, b, c))", misconception: mean-takes-many}
+
+# The final assessment unlocks when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-filter
+      skill: f-combine
+      ask: "What does penguins |> filter(species == c(\"Adelie\", \"Gentoo\")) return?"
+      options:
+        - {choice: "Only some Adelie and Gentoo rows: == compares row by row against a recycled pair", correct: true}
+        - {choice: "Every Adelie and every Gentoo penguin", misconception: eq-is-in}
+        - {choice: "An error, because the right side has two values", misconception: length-error}
+      explain: "== compares element by element, so the pair is recycled down the column: row 1 is checked against Adelie, row 2 against Gentoo, and so on. It returns 138 rows, not 276. Use %in% to test membership."
+    - id: fin-slice
+      skill: a-slice
+      ask: "penguins |> group_by(species) |> slice_head(n = 1) returns how many rows?"
+      options:
+        - {choice: "3", correct: true}
+        - {choice: "1", misconception: slice-ignores-groups}
+        - {choice: "344", misconception: slice-keeps-all}
+      verify: "nrow(penguins |> dplyr::group_by(species) |> dplyr::slice_head(n = 1))"
+    - id: fin-select
+      skill: s-cols
+      ask: "penguins |> select(body_mass_g, everything()) returns how many columns?"
+      options:
+        - {choice: "8", correct: true}
+        - {choice: "9", misconception: everything-duplicates}
+        - {choice: "1", misconception: everything-ignored}
+      verify: "ncol(penguins |> dplyr::select(body_mass_g, dplyr::everything()))"
+    - id: fin-mutate
+      skill: m-new
+      ask: "mutate(body_mass_g = body_mass_g / 1000, kg = body_mass_g). For a 3,750 g penguin, what is kg?"
+      options:
+        - {choice: "3.75", correct: true}
+        - {choice: "3750", misconception: mutate-simultaneous}
+      verify: "(penguins |> dplyr::slice(1) |> dplyr::mutate(body_mass_g = body_mass_g / 1000, kg = body_mass_g))$kg"
+    - id: fin-summarise
+      skill: su-funs
+      ask: "penguins |> summarise(missing = sum(is.na(body_mass_g))) returns what?"
+      options:
+        - {choice: "2", correct: true}
+        - {choice: "NA", misconception: na-propagates-always}
+        - {choice: "0", misconception: is-na-skips}
+      verify: "(penguins |> dplyr::summarise(missing = sum(is.na(body_mass_g))))$missing"
+    - id: fin-group
+      skill: g-invisible
+      ask: "penguins |> group_by(species) |> mutate(rank = row_number()): what is the largest value of rank?"
+      options:
+        - {choice: "152", correct: true}
+        - {choice: "344", misconception: mutate-ignores-groups}
+        - {choice: "3", misconception: one-row-per-group}
+      verify: "max((penguins |> dplyr::group_by(species) |> dplyr::mutate(rank = dplyr::row_number()))$rank)"
+    - id: fin-across
+      skill: x-names
+      ask: "summarise(across(c(a, b), list(lo = min, hi = max))) returns how many columns?"
+      options:
+        - {choice: "4", correct: true}
+        - {choice: "2", misconception: list-is-one}
+        - {choice: "6", misconception: keeps-originals}
+      verify: "ncol(data.frame(a = 1:3, b = 4:6) |> dplyr::summarise(dplyr::across(c(a, b), list(lo = min, hi = max))))"
+  integrative:
+    id: fin-gap
+    prompt: >-
+      Which species has the largest gap between its heaviest male and its
+      heaviest female? Return one row per species with the gap in grams,
+      largest first.
+    hint: >-
+      Two summaries in a row: first the heaviest mass per species and sex,
+      then the difference within each species. A value can be picked out of
+      a column with max_mass[sex == "male"].
+    solution: |
+      penguins |>
+        filter(!is.na(sex)) |>
+        summarise(max_mass = max(body_mass_g), .by = c(species, sex)) |>
+        summarise(gap = max_mass[sex == "male"] - max_mass[sex == "female"],
+                  .by = species) |>
+        arrange(desc(gap))
+    compare: {ignore_row_order: false}

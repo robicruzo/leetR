@@ -1,0 +1,96 @@
+- id: mutate-flipper-cm
+  tier: warm-up
+  type: write
+  skill: m-vec
+  prompt: "Add flipper_cm, the flipper length in centimetres."
+  hint: "There are 10 mm in a centimetre."
+  solution: |
+    penguins |>
+      mutate(flipper_cm = flipper_length_mm / 10)
+
+- id: mutate-heavy
+  tier: warm-up
+  type: write
+  skill: m-new
+  prompt: "Add heavy: TRUE when the body mass is over 4,500 g."
+  hint: "A comparison is already a TRUE/FALSE column."
+  solution: |
+    penguins |>
+      mutate(heavy = body_mass_g > 4500)
+
+- id: mutate-ratio
+  tier: core
+  type: write
+  skill: m-vec
+  prompt: "Add mass_per_mm, body mass divided by flipper length, then keep only species and the new column."
+  hint: "mutate() first, then select()."
+  solution: |
+    penguins |>
+      mutate(mass_per_mm = body_mass_g / flipper_length_mm) |>
+      select(species, mass_per_mm)
+
+- id: mutate-bmi
+  tier: core
+  type: write
+  skill: m-vec
+  data: starwars
+  prompt: "From starwars, add bmi = mass divided by height in metres squared, and keep name, height, mass and bmi."
+  hint: "height is in centimetres, so divide by 100 before squaring."
+  solution: |
+    starwars |>
+      mutate(bmi = mass / (height / 100)^2) |>
+      select(name, height, mass, bmi)
+
+- id: mutate-check-flag
+  tier: core
+  type: write
+  skill: m-ifelse
+  prompt: 'Add tagged: "check" when sex or body mass is missing, and "ok" otherwise.'
+  hint: "is.na() never returns NA, so it is safe inside if_else()."
+  solution: |
+    penguins |>
+      mutate(tagged = if_else(is.na(sex) | is.na(body_mass_g), "check", "ok"))
+
+- id: mutate-mpg-efficiency
+  tier: stretch
+  type: constrained
+  skill: m-case
+  data: mpg
+  prompt: 'From mpg, add efficiency: "great" for hwy of 30 or more, "good" for 25 to 29, and "poor" otherwise. Use case_when().'
+  hint: "Order matters: the first TRUE condition wins."
+  solution: |
+    mpg |>
+      mutate(efficiency = case_when(hwy >= 30 ~ "great",
+                                    hwy >= 25 ~ "good",
+                                    .default = "poor"))
+  require: ["case_when"]
+
+- id: mutate-fix-case-order
+  tier: stretch
+  type: fix
+  skill: m-case
+  prompt: 'This code never labels a penguin "huge", although some weigh over 5,000 g. Fix it.'
+  starter: |
+    penguins |>
+      mutate(size = case_when(body_mass_g > 4000 ~ "large",
+                              body_mass_g > 5000 ~ "huge",
+                              .default = "small"))
+  hint: "Which condition does a 5,500 g penguin meet first?"
+  solution: |
+    penguins |>
+      mutate(size = case_when(body_mass_g > 5000 ~ "huge",
+                              body_mass_g > 4000 ~ "large",
+                              .default = "small"))
+
+- id: mutate-zscore
+  tier: brain-melter
+  type: constrained
+  skill: m-new
+  prompt: "Add mass_z: each penguin's body mass as a z-score within its own species, in a single mutate() and without group_by()."
+  hint: "A z-score is (x - mean) / sd. mutate() takes .by."
+  solution: |
+    penguins |>
+      mutate(mass_z = (body_mass_g - mean(body_mass_g, na.rm = TRUE)) /
+                      sd(body_mass_g, na.rm = TRUE),
+             .by = species)
+  forbid: ["group_by"]

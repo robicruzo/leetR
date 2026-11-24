@@ -1,0 +1,37 @@
+data: penguins_sample |> select(species, island, body_mass_g)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "Eight penguins: species, island and body mass in grams."
+  - code: "group_by(species)"
+    tint: species
+    caption: "Each row takes its species colour, and nothing moves. group_by() does not sort, count or drop anything; it only records the groups."
+    skill: g-invisible
+  - code: ""
+    show: "group_by(species)"
+    tint: species
+    bands: true
+    caption: "How dplyr thinks of it: three stacks of rows, one per species. (The printed table keeps its original order.)"
+  - code: "summarise(m = mean(body_mass_g, na.rm = TRUE))"
+    merge: {by: [species], pour: {m: body_mass_g}}
+    tint: species
+    caption: "Each stack's masses pour into one value. island has no single value per species, so it cannot survive. The result is 3 × 2, and no grouping is left."
+    skill: g-collapse
+  - from_data: true
+    code: "group_by(species, island)"
+    tint: species
+    caption: "Now group by two keys. The sample has five species and island combinations."
+  - code: "summarise(m = mean(body_mass_g, na.rm = TRUE))"
+    merge: {by: [species, island], pour: {m: body_mass_g}}
+    tint: species
+    caption: "The result is 5 × 3. summarise() peeled off only the last key, island, so the result is still grouped by species."
+    skill: g-peel
+  - code: "mutate(share = m / sum(m))"
+    tint: species
+    caption: "Because the species grouping is still on, sum(m) adds up within each species. The Adelie shares add to 1; Gentoo, alone on Biscoe, gets 1."
+  - from_data: true
+    code: "count(species)"
+    merge: {by: [species], pour: {"n": island}}
+    tint: species
+    caption: "count(species) is group_by(species) plus summarise(n = n()), and its result is never grouped."
+    skill: g-count

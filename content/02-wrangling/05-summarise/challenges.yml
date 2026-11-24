@@ -1,0 +1,87 @@
+- id: summarise-flipper
+  tier: warm-up
+  type: write
+  skill: su-na
+  prompt: "Return the mean flipper length of all penguins, ignoring missing values, in a column called mean_flipper."
+  hint: "mean() needs na.rm = TRUE here."
+  solution: |
+    penguins |>
+      summarise(mean_flipper = mean(flipper_length_mm, na.rm = TRUE))
+
+- id: summarise-counts
+  tier: warm-up
+  type: write
+  skill: su-collapse
+  prompt: "Return one row with n, the number of penguins, and islands, the number of distinct islands."
+  hint: "n() takes no arguments; n_distinct() takes a column."
+  solution: |
+    penguins |>
+      summarise(n = n(), islands = n_distinct(island))
+
+- id: summarise-storms
+  tier: core
+  type: write
+  skill: su-collapse
+  data: storms
+  prompt: "From storms, return max_wind, the highest wind speed, and min_pressure, the lowest pressure."
+  hint: "Two summaries in one summarise()."
+  solution: |
+    storms |>
+      summarise(max_wind = max(wind), min_pressure = min(pressure))
+
+- id: summarise-share-female
+  tier: core
+  type: write
+  skill: su-funs
+  prompt: "Return share_female: the share of penguins that are female, among those whose sex is known."
+  hint: "The mean of a TRUE/FALSE condition is a share. What should happen to the NAs?"
+  solution: |
+    penguins |>
+      summarise(share_female = mean(sex == "female", na.rm = TRUE))
+
+- id: summarise-mpg-spread
+  tier: core
+  type: write
+  skill: su-funs
+  data: mpg
+  prompt: "From mpg, return the median and the interquartile range of highway mileage, as med_hwy and iqr_hwy."
+  hint: "median() and IQR()."
+  solution: |
+    mpg |>
+      summarise(med_hwy = median(hwy), iqr_hwy = IQR(hwy))
+
+- id: summarise-fix-name
+  tier: stretch
+  type: fix
+  skill: su-name
+  prompt: "This should return the mean body mass in a column called mean_mass. It returns NA under an awkward name. Fix both problems."
+  starter: |
+    penguins |>
+      summarise(mean(body_mass_g))
+  hint: "Name the summary on the left of =, and deal with the two missing masses."
+  solution: |
+    penguins |>
+      summarise(mean_mass = mean(body_mass_g, na.rm = TRUE))
+
+- id: summarise-percentiles
+  tier: stretch
+  type: constrained
+  skill: su-one
+  prompt: "Return the 10th, 50th and 90th percentiles of body mass, one row each, with a column p holding 0.1, 0.5 and 0.9 and a column mass holding the values."
+  hint: "This summary returns three rows, so use reframe(). A column made earlier in the call can be used later in it."
+  solution: |
+    penguins |>
+      reframe(p = c(0.1, 0.5, 0.9),
+              mass = quantile(body_mass_g, p, na.rm = TRUE))
+  require: ["reframe"]
+
+- id: summarise-gentoo-no-filter
+  tier: brain-melter
+  type: constrained
+  skill: su-funs
+  prompt: "Return gentoo_mean, the mean body mass of the Gentoo penguins only, without filter() and without grouping."
+  hint: "Inside summarise() a column is an ordinary vector, so x[condition] keeps the matching values."
+  solution: |
+    penguins |>
+      summarise(gentoo_mean = mean(body_mass_g[species == "Gentoo"], na.rm = TRUE))
+  forbid: ["filter", "group_by", ".by"]

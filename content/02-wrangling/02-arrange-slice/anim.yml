@@ -1,0 +1,21 @@
+data: penguins_sample |> select(species, sex, body_mass_g)
+steps:
+  - code: ""
+    show: penguins_sample
+    caption: "The eight penguins in their original order."
+  - code: "arrange(body_mass_g)"
+    caption: "Rows reorder from lightest to heaviest. Each row moves as a unit, so species and sex travel with their mass. The missing mass goes last."
+    skill: a-order
+  - code: "arrange(desc(body_mass_g))"
+    caption: "desc() flips the order, heaviest first. The NA still goes last: it cannot be compared, so it is never sorted to the top."
+    skill: a-na
+  - code: "arrange(species, desc(body_mass_g))"
+    caption: "Two columns: sort by species first, then heaviest first within each species. The second column only breaks ties in the first."
+    skill: a-desc
+  - code: "slice_max(body_mass_g, n = 3)"
+    caption: "slice_max() keeps the 3 heaviest. Unlike arrange(), it changes the number of rows."
+    skill: a-slice
+  - from_data: true
+    code: "slice_max(body_mass_g, n = 1, by = species)"
+    tint: species
+    caption: "With by = species it picks per group: the heaviest penguin of each species."

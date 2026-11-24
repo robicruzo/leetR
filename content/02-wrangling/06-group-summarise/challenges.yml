@@ -1,0 +1,99 @@
+- id: group-predict-invisible
+  tier: warm-up
+  type: predict
+  skill: g-invisible
+  prompt: "penguins has 344 rows and 3 species. How many rows does this return?"
+  code: |
+    penguins |>
+      group_by(species) |>
+      nrow()
+  options: ["344", "3", "152"]
+  verify: "result"
+  explain: "group_by() changes nothing you can see except the Groups line. The rows are all still there until a verb such as summarise() uses the groups."
+
+- id: group-mean-flipper
+  tier: warm-up
+  type: write
+  skill: g-collapse
+  prompt: "Return the mean flipper length per species, as mean_flipper, ignoring missing values."
+  hint: "group_by(), then summarise()."
+  solution: |
+    penguins |>
+      group_by(species) |>
+      summarise(mean_flipper = mean(flipper_length_mm, na.rm = TRUE))
+
+- id: group-species-sex
+  tier: core
+  type: write
+  skill: g-peel
+  prompt: "For each species and sex, return n and mean_mass, as an ungrouped table."
+  hint: "summarise() leaves the result grouped by species unless you tell it otherwise."
+  solution: |
+    penguins |>
+      group_by(species, sex) |>
+      summarise(n = n(), mean_mass = mean(body_mass_g, na.rm = TRUE),
+                .groups = "drop")
+
+- id: group-homeworlds
+  tier: core
+  type: write
+  skill: g-count
+  data: starwars
+  prompt: "From starwars, count the characters per homeworld, keep the homeworlds with at least 3 characters, and sort them from most to fewest."
+  hint: "count(), then filter() on n, then arrange()."
+  solution: |
+    starwars |>
+      count(homeworld) |>
+      filter(n >= 3) |>
+      arrange(desc(n))
+
+- id: group-storm-years
+  tier: core
+  type: constrained
+  skill: g-by
+  data: storms
+  prompt: "From storms, return the highest wind speed recorded in each year, as max_wind, without group_by()."
+  hint: "summarise() takes .by."
+  solution: |
+    storms |>
+      summarise(max_wind = max(wind), .by = year)
+  forbid: ["group_by"]
+  compare: {ignore_row_order: true}
+
+- id: group-island-share
+  tier: stretch
+  type: write
+  skill: g-peel
+  prompt: "For each species, return the share of its penguins found on each island, using the grouping that summarise() leaves behind."
+  hint: "group_by(species, island) and count with summarise(); the result is still grouped by species, so n / sum(n) is a share within species."
+  solution: |
+    penguins |>
+      group_by(species, island) |>
+      summarise(n = n()) |>
+      mutate(share = n / sum(n))
+
+- id: group-predict-rows
+  tier: stretch
+  type: predict
+  skill: g-collapse
+  prompt: "Sex is missing for some Adelie and some Gentoo penguins. How many rows does this return?"
+  code: |
+    penguins |>
+      group_by(species, sex) |>
+      summarise(n = n()) |>
+      nrow()
+  options: ["8", "6", "9"]
+  verify: "result"
+  explain: "NA is a group of its own. Adelie and Gentoo each have female, male and NA groups; Chinstrap has female and male: 3 + 2 + 3 = 8."
+
+- id: group-heaviest
+  tier: brain-melter
+  type: constrained
+  skill: g-by
+  prompt: "Return the heaviest penguin of each species from penguins, in one pipeline, without any slice_*() function."
+  hint: "filter() also works per group. What condition is TRUE only for the heaviest row in each group?"
+  solution: |
+    penguins |>
+      filter(body_mass_g == max(body_mass_g, na.rm = TRUE), .by = species)
+  forbid: ["slice_max", "slice_min", "slice_head", "slice_tail", "slice", "slice_sample"]
+  compare: {ignore_row_order: true}
