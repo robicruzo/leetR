@@ -42,9 +42,12 @@
 		}
 	}
 
-	// Draw the visible step once R is ready and the stack is unlocked.
+	// Draw the visible step once R is ready and the stack is unlocked, then the
+	// next one in the background so "Next step" usually has its picture ready.
 	$effect(() => {
-		if (!locked && engineUp && images[step] === undefined && !drawing) void draw(step);
+		if (locked || !engineUp || drawing) return;
+		if (images[step] === undefined) void draw(step);
+		else if (step + 1 < steps.length && images[step + 1] === undefined) void draw(step + 1);
 	});
 
 	function show(i: number) {
@@ -71,27 +74,48 @@
 
 	$effect(() => stop);
 
-	function paint(canvas: HTMLCanvasElement, img: ImageBitmap) {
-		const put = (b: ImageBitmap) => {
-			canvas.width = b.width;
-			canvas.height = b.height;
-			canvas.getContext('2d')?.drawImage(b, 0, 0);
-		};
-		put(img);
-		return { update: put };
-	}
+	// One canvas for the whole stack, never removed: each step paints over the
+	// last, and until the new picture arrives the previous one stays on it (dimmed),
+	// so the white sheet keeps its size between steps instead of collapsing.
+	let canvas = $state<HTMLCanvasElement>();
+	let shown = $state(-1); // which step's picture is on the canvas
+	$effect(() => {
+		const img = image;
+		if (!canvas || img === undefined || shown === step) return;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+		if (typeof img === 'object') {
+			canvas.width = img.width;
+			canvas.height = img.height;
+			ctx.drawImage(img, 0, 0);
+		} else {
+			ctx.fillStyle = '#fff';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+		}
+		shown = step;
+	});
+	const note = $derived(
+		typeof image === 'string'
+			? image
+			: image === undefined
+				? engineUp
+					? `R is drawing step ${step + 1}…`
+					: 'Waiting for R to start…'
+				: ''
+	);
 </script>
 
 <section class="stack" class:locked>
 	<div class="head"><h2>2 · Watch</h2></div>
 	<div class="stage">
-		{#if image && typeof image === 'object'}
-			<canvas use:paint={image} aria-label="Plot for step {step + 1} of {steps.length}"></canvas>
-		{:else if typeof image === 'string'}
-			<p class="note">{image}</p>
-		{:else}
-			<p class="note">{engineUp ? 'R is drawing this step…' : 'Waiting for R to start…'}</p>
-		{/if}
+		<canvas
+			bind:this={canvas}
+			width="1280"
+			height="800"
+			class:stale={shown !== step}
+			aria-label="Plot for step {step + 1} of {steps.length}"
+		></canvas>
+		{#if note}<p class="note" class:error={typeof image === 'string'}>{note}</p>{/if}
 	</div>
 	<div class="lock">Make your prediction first. The plots answer it.</div>
 
@@ -126,10 +150,11 @@
 		margin: 0;
 		font-size: 1.15rem;
 	}
+	/* A fixed white sheet with the device's shape (640 × 400), whatever is on it. */
 	.stage {
-		display: grid;
-		place-items: center;
-		min-height: 260px;
+		position: relative;
+		aspect-ratio: 640 / 400;
+		max-width: 640px;
 		background: #fff;
 		border: 1px solid var(--border);
 		border-radius: 12px;
@@ -137,12 +162,25 @@
 	}
 	canvas {
 		display: block;
-		max-width: 100%;
-		height: auto;
+		width: 100%;
+		height: 100%;
+		transition: opacity 0.15s;
+	}
+	canvas.stale {
+		opacity: 0.35;
 	}
 	.note {
-		color: #555;
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		margin: 0;
 		padding: 1rem;
+		text-align: center;
+		color: #555;
+	}
+	.note.error {
+		color: #a33;
 	}
 	.lock {
 		display: none;
