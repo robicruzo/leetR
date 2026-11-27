@@ -1,0 +1,74 @@
+id: 06-dates
+title: "Dates and times with lubridate"
+key_idea: >-
+  Text such as "01/02/2026" is not a date until it is parsed, and the
+  parser must know the order of its parts: mdy() reads 2 January, dmy() 1
+  February. Once parsed, year(), month() and wday() take dates apart,
+  floor_date() rounds them down, and make_date() builds them from columns.
+  Arithmetic comes in two kinds: periods (days(1)) follow the clock and the
+  calendar, durations (ddays(1)) are exact seconds, and they disagree across
+  a daylight-saving change.
+subskills:
+  - {id: dt-parse, name: "ymd(), mdy(), dmy(): the order of the parts"}
+  - {id: dt-components, name: "year(), month(), wday(); floor_date()"}
+  - {id: dt-make, name: "make_date() and make_datetime() from columns"}
+  - {id: dt-arith, name: "Periods vs durations; months(1) can be NA"}
+readings:
+  - {label: "r4ds 17, Dates and times", url: "https://r4ds.hadley.nz/datetimes.html"}
+  - {label: "lubridate reference", url: "https://lubridate.tidyverse.org/reference/index.html"}
+  - {label: "STAT 7500 primer ch. 10 (strings and dates)", url: ""}
+
+predict:
+  skill: dt-parse
+  code: |
+    mdy("01/02/2026")
+  ask: "What date does this return?"
+  options:
+    - {choice: "2026-01-02", correct: true}
+    - choice: "2026-02-01"
+      misconception: parser-reads-day-first
+      probe: "mdy stands for month, day, year. Which number is the month?"
+    - choice: "An error: the date is ambiguous"
+      misconception: ambiguous-errors
+      probe: "You told mdy() the order. Is it still ambiguous?"
+  verify: 'as.character(result)'
+
+probes:
+  - id: p-month-end
+    skill: dt-arith
+    ask: "What is ymd(\"2026-01-31\") + months(1)?"
+    options:
+      - {choice: "NA", correct: true}
+      - choice: "2026-02-28"
+        misconception: months-roll-back
+        probe: "There is no 31 February. Does + months(1) quietly pick another day?"
+      - choice: "2026-03-03"
+        misconception: months-roll-over
+        probe: "Would lubridate overflow into March without telling you?"
+    right_followup: "Are you sure? How would you get the last day of February instead?"
+    explain: >-
+      A period of one month keeps the day of the month, and 31 February
+      doesn't exist, so the result is NA. %m+% rolls back to the last valid
+      day: ymd("2026-01-31") %m+% months(1) is 2026-02-28.
+    verify: 'is.na(ymd("2026-01-31") + months(1))'
+  - id: p-dst
+    skill: dt-arith
+    ask: >-
+      In New York the clocks jumped from 2 am to 3 am on 8 March 2026.
+      t <- ymd_hms("2026-03-07 12:00:00", tz = "America/New_York"). What is
+      t + ddays(1)?
+    options:
+      - {choice: "2026-03-08 13:00", correct: true}
+      - choice: "2026-03-08 12:00"
+        misconception: duration-is-period
+        probe: "ddays(1) is exactly 86,400 seconds. On a day that lost an hour, where do 86,400 seconds land on the clock?"
+      - choice: "NA"
+        misconception: dst-gives-na
+        probe: "13:00 on 8 March exists. Is there anything invalid here?"
+    right_followup: "Are you sure? Then what is t + days(1), and why is it different?"
+    explain: >-
+      ddays(1) is a duration: 86,400 seconds. That day had only 23 hours, so
+      86,400 seconds later the clock reads 13:00. days(1) is a period: "same
+      clock time tomorrow", 12:00. Starting before 2 am, both would agree,
+      because the change hadn't happened yet.
+    verify: 'format(lubridate::ymd_hms("2026-03-07 12:00:00", tz = "America/New_York") + lubridate::ddays(1), "%Y-%m-%d %H:%M") == "2026-03-08 13:00"'

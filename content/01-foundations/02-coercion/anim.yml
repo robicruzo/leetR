@@ -1,0 +1,15 @@
+data: 'tibble(code = c("c(TRUE, 2L)", "c(2L, 3.5)", "c(3.5, \"a\")", "c(TRUE, \"a\")", "TRUE + TRUE", "as.numeric(\"n/a\")"))'
+steps:
+  - code: ""
+    show: "c(TRUE, 2L)   c(2L, 3.5)   c(3.5, \"a\")   c(TRUE, \"a\")   …"
+    caption: "Each line mixes two types. A vector can only have one, so R has to convert."
+  - code: 'mutate(type = map_chr(code, \(s) typeof(suppressWarnings(eval(parse(text = s))))))'
+    show: "typeof(…)"
+    tint: type
+    caption: "R converts up the ladder logical → integer → double → character, to the first type that can hold every value."
+    skill: co-auto
+  - code: 'mutate(value = map_chr(code, \(s) toString(suppressWarnings(eval(parse(text = s))))))'
+    show: "the values"
+    tint: type
+    caption: "TRUE became 1 next to an integer, but \"TRUE\" next to text. TRUE + TRUE is 2. And text that isn't a number becomes NA (with a warning)."
+    skill: co-explicit

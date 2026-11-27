@@ -1,0 +1,81 @@
+- id: vec-mass-type
+  tier: warm-up
+  type: predict
+  skill: vt-typeof
+  prompt: "body_mass_g holds whole numbers of grams, such as 3750. What does this return?"
+  code: |
+    typeof(penguins$body_mass_g)
+  options: ["integer", "double", "numeric"]
+  verify: 'result'
+  explain: "palmerpenguins stores body mass as integers (3750L), so typeof() says integer. A whole number you type yourself, like 3750, would be double."
+
+- id: vec-island-length
+  tier: warm-up
+  type: write
+  skill: vt-length
+  prompt: "How many values does the island column of penguins hold? Return one number."
+  hint: "A column is a vector: penguins$island. length() counts its elements."
+  solution: |
+    length(penguins$island)
+
+- id: vec-column-types
+  tier: core
+  type: write
+  skill: vt-typeof
+  data: starwars
+  prompt: "Return the type (typeof) of every column of starwars, as a named character vector."
+  hint: "sapply(starwars, typeof) applies typeof() to each column and names the results."
+  solution: |
+    sapply(starwars, typeof)
+  # Column types don't change with the rows, so a half-sample re-run can't catch a typed-in answer.
+  robust: false
+
+- id: vec-ends
+  tier: core
+  type: write
+  skill: vt-c
+  prompt: "One vector of 6 bill lengths: the first three penguins' and then the last three's."
+  hint: "head(x, 3) and tail(x, 3) give the ends; c() joins them."
+  solution: |
+    c(head(penguins$bill_length_mm, 3), tail(penguins$bill_length_mm, 3))
+
+- id: vec-fix-kg
+  tier: core
+  type: fix
+  skill: vt-kinds
+  prompt: "This should return every penguin's body mass in kilograms. Fix it."
+  hint: "Read the error: what type is \"1000\"?"
+  starter: |
+    penguins$body_mass_g / "1000"
+  solution: |
+    penguins$body_mass_g / 1000
+
+- id: vec-two-factors
+  tier: stretch
+  type: predict
+  skill: vt-c
+  prompt: "species and island are factors, 344 values each. What is the length of the result?"
+  code: |
+    c(penguins$species, penguins$island)
+  options: ["688", "344", "2", "6"]
+  verify: 'length(result)'
+  explain: "c() puts all the values in one vector: 344 + 344 = 688. Since R 4.1 it also combines the two factors' levels (3 species + 3 islands) into one factor."
+
+- id: vec-numeric-columns
+  tier: stretch
+  type: constrained
+  skill: vt-typeof
+  prompt: "Keep only the numeric columns of penguins (as a tibble), without select()."
+  hint: "sapply(penguins, is.numeric) is a logical vector, one TRUE or FALSE per column, and [ ] takes it."
+  solution: |
+    penguins[sapply(penguins, is.numeric)]
+  forbid: ["select", "where"]
+
+- id: vec-distinct-counts
+  tier: brain-melter
+  type: write
+  skill: vt-length
+  prompt: "For each column of penguins, the number of distinct values (NA counts as one), as a named integer vector."
+  hint: "length(unique(x)) counts distinct values of one vector. Apply it to every column."
+  solution: |
+    sapply(penguins, function(col) length(unique(col)))

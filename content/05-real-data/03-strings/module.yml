@@ -1,0 +1,68 @@
+id: 03-strings
+title: "Strings with stringr"
+key_idea: >-
+  stringr's functions all start with str_ and take the strings first, so
+  they work inside mutate() and filter(). str_length() and str_sub() measure
+  and cut; str_detect() asks a yes/no question per string; str_replace()
+  changes the first match and str_replace_all() every match; str_c() glues
+  strings together, and returns NA if any piece is NA (paste() writes "NA"
+  instead).
+subskills:
+  - {id: st-length, name: "str_length() and str_sub(): measure and cut"}
+  - {id: st-detect, name: "str_detect(): one TRUE or FALSE per string"}
+  - {id: st-replace, name: "str_replace() changes the first match; _all every one"}
+  - {id: st-combine, name: "str_c() glues; NA in, NA out"}
+readings:
+  - {label: "r4ds 14, Strings", url: "https://r4ds.hadley.nz/strings.html"}
+  - {label: "stringr cheatsheet", url: "https://rstudio.github.io/cheatsheets/html/strings.html"}
+  - {label: "STAT 7500 primer ch. 10 (strings and dates)", url: ""}
+
+predict:
+  skill: st-combine
+  code: |
+    str_c("a", NA)
+  ask: "What does this return?"
+  options:
+    - {choice: "NA", correct: true}
+    - choice: "\"a\""
+      misconception: na-skipped
+      probe: "If one piece of the result is unknown, is the whole string known?"
+    - choice: "\"aNA\""
+      misconception: str-c-is-paste
+      probe: "That is what paste0(\"a\", NA) gives. Does str_c() write NA as text?"
+  verify: 'result'
+
+probes:
+  - id: p-replace-first
+    skill: st-replace
+    ask: "What does str_replace(\"banana\", \"a\", \"o\") return?"
+    options:
+      - {choice: "\"bonana\"", correct: true}
+      - choice: "\"bonono\""
+        misconception: replace-is-all
+        probe: "str_replace() has a sibling called str_replace_all(). What would the sibling be for?"
+      - choice: "\"o\""
+        misconception: replace-whole
+        probe: "Does str_replace() swap the whole string, or the part that matches?"
+    right_followup: "Are you sure? Which call gives \"bonono\"?"
+    explain: >-
+      str_replace() changes only the first match: bonana.
+      str_replace_all() changes every match: bonono.
+    verify: 'paste0("\"", stringr::str_replace("banana", "a", "o"), "\"")'
+  - id: p-length-na
+    skill: st-length
+    ask: "What does str_length(c(\"R\", \"tidyverse\", NA)) return?"
+    options:
+      - {choice: "1, 9, NA", correct: true}
+      - choice: "1, 9, 2"
+        misconception: na-is-text
+        probe: "Is NA the two letters N and A, or a missing value?"
+      - choice: "3"
+        misconception: length-is-count
+        probe: "length() counts elements. What does str_length() count?"
+    right_followup: "Are you sure? What would str_length(\"NA\") be?"
+    explain: >-
+      str_length() counts the characters of each string: 1 and 9. A missing
+      string has no known length, so NA. The text "NA", in quotes, is two
+      characters long.
+    verify: 'paste(stringr::str_length(c("R", "tidyverse", NA)), collapse = ", ")'

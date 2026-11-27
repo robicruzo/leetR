@@ -8,6 +8,12 @@
 suppressPackageStartupMessages({
   library(dplyr)
   library(tidyr)
+  library(purrr)
+  library(stringr)
+  library(forcats)
+  library(lubridate)
+  library(readr)
+  library(janitor)
   # Attached after `datasets`, so `penguins` is palmerpenguins' version
   # (bill_length_mm, ...), not the one base R 4.5+ ships (bill_len, ...).
   library(palmerpenguins)
@@ -44,3 +50,14 @@ mass_bands <- tibble(
   to   = c(3499L, 4499L, 6500L)
 )
 fees <- tibble(from_distance = c(0, 500, 1000, 2000), fee = c(25, 40, 60, 90))
+
+# Real-world data (Track 5). stringr's word lists as tables, so a challenge
+# can be re-run on half of them.
+words_df <- tibble(word = stringr::words)
+sentences_df <- tibble(sentence = stringr::sentences)
+
+# Small made-up CSV files, as text (read them with read_csv(I(raw_scores))).
+# raw_scores marks missing scores three different ways; raw_messy has messy
+# column names, an empty row and an empty column.
+raw_scores <- "student,score,submitted\nAna,92,2026-09-01\nBo,n/a,2026-09-03\nCy,-,2026-09-02\nDee,78,missing"
+raw_messy <- "Student Name,Score (%),Notes,\nAna,92,,\n,,,\nBo,78,late,"

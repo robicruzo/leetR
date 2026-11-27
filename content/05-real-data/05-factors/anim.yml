@@ -1,0 +1,17 @@
+data: gss_cat |> count(relig, sort = TRUE) |> head(6)
+steps:
+  - code: ""
+    show: "gss_cat |> count(relig, sort = TRUE) |> head(6)"
+    caption: "The six most common religions in the General Social Survey, sorted by count."
+  - code: "arrange(relig)"
+    caption: "Sorting the factor itself does not give alphabetical order: it follows relig's levels, which the survey defined in its own order."
+    skill: fc-levels
+  - code: "mutate(relig = fct_reorder(relig, n)) |> arrange(relig)"
+    show: "mutate(relig = fct_reorder(relig, n)) |> arrange(relig)"
+    caption: "fct_reorder(relig, n) reorders the levels by n, smallest first. The data didn't change, only the order of the levels, and sorting follows it."
+    skill: fc-reorder
+  - code: 'mutate(relig = fct_lump_n(relig, n = 3, w = n)) |> summarise(n = sum(n), .by = relig)'
+    show: 'mutate(relig = fct_lump_n(relig, n = 3, w = n)) |> summarise(n = sum(n), .by = relig)'
+    merge: {by: [relig], pour: {"n": n}}
+    caption: "fct_lump_n() keeps the 3 biggest levels (weighted by n) and lumps the others into Other, whose counts add up."
+    skill: fc-lump

@@ -1,0 +1,13 @@
+data: starwars |> select(name, films) |> head(6)
+steps:
+  - code: ""
+    show: "starwars[c(\"name\", \"films\")]"
+    caption: "Each cell of films holds a whole character vector: a list-column. Luke's cell holds 5 film titles."
+    skill: ls-listcol
+  - code: 'mutate(n_films = lengths(films))'
+    show: "lengths(films)"
+    caption: "lengths() (with an s) gives the length of every element of a list: here, the number of films per character."
+    skill: ls-make
+  - code: 'arrange(desc(n_films))'
+    caption: "Sorted by that count. A list-column moves with its row like any other column, because a data frame is a list of columns."
+    skill: ls-df

@@ -1,0 +1,21 @@
+data: 'tibble(x = c(1, 2, 3, 4, 5, 6))'
+steps:
+  - code: ""
+    show: "x <- c(1, 2, 3, 4, 5, 6)"
+    caption: "A vector of six numbers, drawn as a column: one tile per element."
+  - code: 'mutate(`x * 2` = x * 2)'
+    show: "x * 2"
+    caption: "x * 2 multiplies every element. The 2 is a vector of length 1, recycled to fit all six."
+    skill: vz-elementwise
+  - code: 'mutate(`c(10, 20)` = rep_len(c(10, 20), n()))'
+    show: "c(10, 20), recycled"
+    caption: "To add c(10, 20), R first repeats it until it is as long as x: 10, 20, 10, 20, 10, 20."
+    skill: vz-recycle
+  - code: 'mutate(`x + c(10, 20)` = x + `c(10, 20)`)'
+    show: "x + c(10, 20)"
+    caption: "Then it adds element by element: 11, 22, 13, 24, 15, 26."
+  - from_data: true
+    code: 'summarise(`sum(x)` = sum(x))'
+    merge: {by: [], pour: {"sum(x)": x}}
+    caption: "A summary goes the other way: sum() reduces the six values to one."
+    skill: vz-reduce

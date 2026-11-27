@@ -1,0 +1,71 @@
+id: 01-import-clean
+title: "Import and clean: readr and janitor"
+key_idea: >-
+  read_csv() guesses each column's type from its values, so one stray
+  "n/a" turns a column of numbers into text. Tell it which strings mean
+  missing with na = c(…), and pull numbers out of messy text with
+  parse_number(). janitor tidies what files arrive with: clean_names() makes
+  names you can type, remove_empty() drops empty rows and columns, and
+  get_dupes() finds repeated rows.
+subskills:
+  - {id: im-guess, name: "read_csv() guesses types from the values"}
+  - {id: im-na, name: "na = c(…) says which strings mean missing"}
+  - {id: im-parse, name: "parse_number() pulls numbers out of text"}
+  - {id: im-janitor, name: "janitor: clean_names(), remove_empty(), get_dupes()"}
+readings:
+  - {label: "r4ds 7, Data import", url: "https://r4ds.hadley.nz/data-import.html"}
+  - {label: "janitor: overview", url: "https://sfirke.github.io/janitor/articles/janitor.html"}
+  - {label: "STAT 7500 primer ch. 3 (import) and ch. 9 (cleaning)", url: ""}
+
+predict:
+  skill: im-guess
+  code: |
+    read_csv(I(raw_scores), show_col_types = FALSE)
+  ask: >-
+    raw_scores is a small CSV: student, score, submitted. The scores are 92,
+    n/a, - and 78. What class is the score column after reading?
+  options:
+    - {choice: "character", correct: true}
+    - choice: "numeric"
+      misconception: na-strings-recognised
+      probe: "By default read_csv() treats only \"\" and \"NA\" as missing. Is \"n/a\" a number?"
+    - choice: "logical"
+      misconception: missing-means-logical
+      probe: "A column of only missing values reads as logical. Is this column only missing values?"
+  verify: 'class(result$score)'
+
+probes:
+  - id: p-na-arg
+    skill: im-na
+    ask: "Which call reads raw_scores with score as numbers and the three kinds of missing as NA?"
+    options:
+      - {choice: "read_csv(I(raw_scores), na = c(\"n/a\", \"-\", \"missing\"))", correct: true}
+      - choice: "read_csv(I(raw_scores)) |> mutate(score = as.numeric(score))"
+        misconception: convert-after
+        probe: "That works for score, with a warning. What happens to \"missing\" in submitted, and why is fixing it at read time better?"
+      - choice: "read_csv(I(raw_scores), na = \"NA\")"
+        misconception: na-means-na
+        probe: "Which strings in this file actually mean missing?"
+    right_followup: "Are you sure? What type does submitted get, once \"missing\" counts as NA?"
+    explain: >-
+      na = lists every string that means missing in this file. Then
+      read_csv() can guess score as a number and submitted as a date. Fixing
+      it at read time keeps the guesses right for every column at once.
+    verify: 'is.numeric(read_csv(I(raw_scores), na = c("n/a", "-", "missing"), show_col_types = FALSE)$score)'
+  - id: p-clean-names
+    skill: im-janitor
+    ask: "What does clean_names() turn the column name \"Score (%)\" into?"
+    options:
+      - {choice: "score_percent", correct: true}
+      - choice: "score"
+        misconception: clean-drops-symbols
+        probe: "Does janitor throw away the % sign, or spell it out?"
+      - choice: "Score...."
+        misconception: make-names
+        probe: "That is base R's make.names() style. Which case does clean_names() use by default?"
+    right_followup: "Are you sure? What would an empty name, or a name used twice, become?"
+    explain: >-
+      clean_names() makes snake_case names: lower case, words joined by _,
+      and symbols spelled out (% becomes percent, # becomes number). Empty
+      names become x, x_2 and so on, and repeated names get a suffix.
+    verify: 'names(janitor::clean_names(tibble::tibble(`Score (%)` = 1)))'

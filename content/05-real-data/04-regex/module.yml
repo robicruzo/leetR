@@ -1,0 +1,69 @@
+id: 04-regex
+title: "Regular expressions: patterns, not just text"
+key_idea: >-
+  The pattern in str_detect() and friends is a regular expression: a small
+  language for describing text. A . matches any character, [aeiou] any one
+  of those, \\d any digit; + means one or more; ^ and $ pin the match to the
+  start or end. A special character you mean literally needs escaping, as
+  "\\." in an R string. Parentheses capture parts, so str_extract() and
+  str_replace() can pull them out or move them around.
+subskills:
+  - {id: rx-literal, name: ". matches anything; \\\\. matches a dot"}
+  - {id: rx-class, name: "Classes and repeats: [aeiou], \\\\d, +"}
+  - {id: rx-anchor, name: "^ and $ anchor to the start and end"}
+  - {id: rx-extract, name: "str_extract() and groups pull parts out"}
+readings:
+  - {label: "r4ds 15, Regular expressions", url: "https://r4ds.hadley.nz/regexps.html"}
+  - {label: "stringr: regular expressions vignette", url: "https://stringr.tidyverse.org/articles/regular-expressions.html"}
+  - {label: "STAT 7500 primer ch. 10 (strings and dates)", url: ""}
+
+predict:
+  skill: rx-literal
+  code: |
+    str_detect(c("a.b", "axb"), ".")
+  ask: "What does this return?"
+  options:
+    - {choice: "TRUE, TRUE", correct: true}
+    - choice: "TRUE, FALSE"
+      misconception: dot-is-literal
+      probe: "In a regular expression, what does a . stand for?"
+    - choice: "FALSE, FALSE"
+      misconception: dot-matches-nothing
+      probe: "Each string has at least one character. What does . match?"
+  verify: 'paste(result, collapse = ", ")'
+
+probes:
+  - id: p-escape-dot
+    skill: rx-literal
+    ask: "Which pattern matches a literal full stop, as in \"St. Louis\"?"
+    options:
+      - {choice: "\"\\\\.\"", correct: true}
+      - choice: "\".\""
+        misconception: dot-is-literal
+        probe: "Would \".\" also match \"St Louis\", with no dot at all?"
+      - choice: "\"\\.\""
+        misconception: single-backslash
+        probe: "In an R string, \\ starts an escape too. Is \"\\.\" even a valid R string?"
+    right_followup: "Are you sure? What does the regex engine actually receive from the R string \"\\\\.\"?"
+    explain: >-
+      The regex needs \. (backslash, dot), and an R string needs \\ to make
+      one backslash, so you type "\\.". Typing "." matches any character, and
+      "\." is an error in R.
+    verify: 'stringr::str_detect("St. Louis", "\\.") && !stringr::str_detect("St Louis", "\\.")'
+  - id: p-anchor
+    skill: rx-anchor
+    ask: "What does str_detect(c(\"apple\", \"pineapple\"), \"^apple\") return?"
+    options:
+      - {choice: "TRUE, FALSE", correct: true}
+      - choice: "TRUE, TRUE"
+        misconception: anchor-ignored
+        probe: "What does the ^ ask about where the match is?"
+      - choice: "FALSE, TRUE"
+        misconception: caret-is-not
+        probe: "Inside [ ], ^ means not. What does it mean at the start of a pattern?"
+    right_followup: "Are you sure? Which pattern would match only \"pineapple\"?"
+    explain: >-
+      ^ pins the match to the start of the string, and $ to the end. "apple"
+      alone would match both strings; "^apple" only the one that begins with
+      it, and "^pine" only pineapple.
+    verify: 'paste(stringr::str_detect(c("apple", "pineapple"), "^apple"), collapse = ", ")'

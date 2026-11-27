@@ -1,0 +1,69 @@
+id: 06-lists
+title: "Lists: vectors that hold anything"
+key_idea: >-
+  A list is a vector whose elements can be anything: numbers, text, other
+  vectors of any length, even other lists. Unlike c(), list() keeps its
+  pieces separate. [ ] on a list returns a smaller list; [[ ]] and $ return
+  the element itself. A data frame is a list of equal-length columns, and a
+  column can itself be a list (a list-column), like starwars$films.
+subskills:
+  - {id: ls-make, name: "A list holds values of any type and length"}
+  - {id: ls-bracket, name: "[ ] returns a list; [[ ]] returns the element"}
+  - {id: ls-df, name: "A data frame is a list of columns"}
+  - {id: ls-listcol, name: "List-columns: one vector per row"}
+readings:
+  - {label: "Advanced R 3.5, Lists", url: "https://adv-r.hadley.nz/vectors-chap.html#lists"}
+  - {label: "r4ds 27.3, Selecting a single element with $ and [[", url: "https://r4ds.hadley.nz/base-r.html#sec-subset-one"}
+  - {label: "STAT 7500 primer ch. 2 (data basics)", url: ""}
+
+predict:
+  skill: ls-make
+  code: |
+    length(list(1:3, "a", TRUE))
+  ask: "A list of a 3-number vector, a string and a logical. What does this return?"
+  options:
+    - {choice: "3", correct: true}
+    - choice: "5"
+      misconception: list-flattens
+      probe: "c(1:3, \"a\", TRUE) would have 5 elements. Does list() pour the values together the way c() does?"
+    - choice: "1"
+      misconception: list-is-one
+      probe: "length() of a list counts its elements. How many things did you put in?"
+  verify: 'result'
+
+probes:
+  - id: p-single-bracket
+    skill: ls-bracket
+    ask: "x <- list(a = 1:3, b = \"z\"). What is class(x[\"a\"])?"
+    options:
+      - {choice: "list", correct: true}
+      - choice: "integer"
+        misconception: single-bracket-extracts
+        probe: "[ ] picks some elements and keeps them in their container. What is the container here?"
+      - choice: "character"
+        misconception: name-is-value
+        probe: "\"a\" is the name you asked for. What is stored under that name?"
+    right_followup: "Are you sure? Then what are class(x[[\"a\"]]) and class(x$a)?"
+    explain: >-
+      [ ] on a list returns a list, even with one element: x["a"] is a list
+      holding 1:3. [[ ]] and $ go one level in and return 1:3 itself, an
+      integer vector. A good picture: [ ] gives a smaller train, [[ ]] gives
+      what was in one carriage.
+    verify: 'class(list(a = 1:3, b = "z")["a"]) == "list"'
+  - id: p-df-length
+    skill: ls-df
+    ask: "penguins has 344 rows and 8 columns. What does length(penguins) return?"
+    options:
+      - {choice: "8", correct: true}
+      - choice: "344"
+        misconception: length-is-rows
+        probe: "A data frame is a list. What are the elements of that list?"
+      - choice: "2752"
+        misconception: length-is-cells
+        probe: "Does length() look inside each column, or count the list's elements?"
+    right_followup: "Are you sure? Which function gives 344?"
+    explain: >-
+      A data frame is a list of columns, so length() counts columns: 8.
+      nrow() gives 344. That is also why sapply(penguins, f) applies f to
+      each column.
+    verify: 'length(penguins)'

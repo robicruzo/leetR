@@ -148,11 +148,11 @@ Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
 
 | # | Track | Modules | Needs | Readings |
 |---|---|---|---|---|
-| 1 | R foundations | atomic vectors and types · coercion · vectorization and recycling · logical operators and NA · subsetting `[` `[[` `$` · lists | – | Adv R 3–4, r4ds 12, 27, primer 2 |
+| 1 | R foundations (**built**) | atomic vectors and types · coercion · vectorization and recycling · logical operators and NA · subsetting `[` `[[` `$` · lists | – | Adv R 3–4, r4ds 12, 27, primer 2 |
 | 2 | One-table wrangling (**built**) | filter · arrange + slice_* · select + rename · mutate + if_else + case_when · summarise · group_by + summarise · across | 1 | r4ds 3, MDSR 4, primer 6 |
 | 3 | Tidy data and reshaping (**built**) | what makes data tidy · pivot_longer · pivot_wider · separate_wider_* and unite · explicit vs implicit missing | 2 | r4ds 5, 18, MDSR 6, primer 8 |
 | 4 | Joins (**built**) | keys · mutating joins · filtering joins · duplicate keys, many-to-many · join_by inequality/rolling | 2 | r4ds 19, MDSR 5, primer 7 |
-| 5 | Real-world data types | import + cleaning (readr, janitor) · counts and proportions (marginal/joint/conditional) · stringr · regex · forcats · lubridate | 2 | r4ds 7, 14–17, primer 8–10 |
+| 5 | Real-world data types (**built**, one intro lubridate module) | import + cleaning (readr, janitor) · counts and proportions (marginal/joint/conditional) · stringr · regex · forcats · lubridate | 2 | r4ds 7, 14–17, primer 8–10 |
 | 6 | Visualization | aes vs constants · geoms and stats · positions (counts vs proportions) · scales and coords · facets · labels/themes/annotations | 2 | r4ds 1, 9–11, MDSR 2–3, primer 4–5 |
 | 7 | Programming | functions · conditionals · for loops + preallocation · map family · tidy eval `{{ }}` `.data` · errors/warnings/stopifnot | 2 | r4ds 25–26, MDSR 7, Adv R 8, primer 11 |
 | 8 | R internals | names/values, copy-on-modify · environments, scoping · closures, function factories · lazy evaluation · S3 | 7 | Adv R 2, 6–7, 10, 13 |
@@ -166,8 +166,11 @@ https://mdsr-book.github.io/mdsr3e/, Advanced R 2e https://adv-r.hadley.nz/.
 - **lubridate** becomes its own short track (4–5 modules): parsing
   (`mdy("01/02/2026")` vs `dmy(...)`; text dates sort alphabetically) ·
   components and rounding (`floor_date()` week start) · periods vs durations
-  (NYC DST starts 2026-03-08: `+ days(1)` vs `+ ddays(1)` from 01:30 the day
-  before; `ymd("2026-01-31") + months(1)` is `NA`, `%m+%` rolls back) · time
+  (NYC DST starts 2026-03-08 at 2 am: `+ days(1)` vs `+ ddays(1)` differ
+  from a start **after** 2 am the day before, e.g. 12:00 → 12:00 vs 13:00 EDT.
+  Corrected 2026-11-27: from 01:30 both give 01:30 EST, because 24 hours
+  later is still before the change. `ymd("2026-01-31") + months(1)` is `NA`,
+  `%m+%` rolls back) · time
   zones (`with_tz()` vs `force_tz()`). Needs the timeline-ruler visual.
   Data: `storms` + `make_datetime()`; verify each example in webR.
 - **janitor** inside Track 5: `clean_names()` (header morph), `tabyl()` +
@@ -240,6 +243,8 @@ Totals:
 | 2, `content/02-wrangling` | 7 | 30 | 56 | 14 | 43 | 1,429 |
 | 3, `content/03-tidy` | 5 | 19 | 40 | 10 | 25 | 1,152 |
 | 4, `content/04-joins` | 5 | 18 | 40 | 10 | 21 | 1,208 |
+| 1, `content/01-foundations` | 6 | 24 | 48 | 12 | 25 | 1,162 |
+| 5, `content/05-real-data` | 6 | 24 | 48 | 12 | 27 | 1,272 |
 
 ### Content format
 
@@ -331,6 +336,12 @@ Datasets: `penguins_sample` and `stocks` (7-row quarterly prices with one
 explicit NA and one absent row, after r4ds 18.3) are defined in
 `content/setup.R`; tidyr's `table1`–`table5`, `billboard`, `relig_income`,
 `who2`, `world_bank_pop`, `fish_encounters`, `us_rent_income` come with tidyr.
+Track 1 uses data frame columns (penguins, starwars) so the half-sample
+re-run still works for vector answers. Track 5 uses readr, janitor, forcats
+and lubridate (all attached by setup.R), forcats' `gss_cat`, stringr's word
+lists as `words_df` / `sentences_df`, and two made-up CSV texts in setup.R,
+`raw_scores` and `raw_messy` (read with `read_csv(I(raw_scores))`; such
+challenges are `robust: false`, as the input is fixed text).
 Track 4 uses nycflights13 (`flights`, `airlines`, `airports`, `planes`,
 `weather`), dplyr's `band_members` / `band_instruments` / `band_instruments2`,
 and from setup.R: `instruments` (band_instruments plus John on piano, so name
@@ -438,8 +449,12 @@ It runs under webR (`.build_args` set by check.mjs) or native R
    with the pair/join animation steps; the key matcher is a shared tint per
    key value. Checked in the browser: tiles fly from y into matched rows,
    grading joins on all of flights (~1 s; a wrong answer ~1–3 s).
-   Next by curriculum order: Track 5 (real-world data types), Track 6
-   (visualization), or Track 1 (foundations, not yet written).
+5. ~~**Tracks 1 and 5**~~ **Done 2026-11-27**: R foundations (6 modules) and
+   real-world data (6 modules: import/cleaning, counts and proportions,
+   strings, regex, factors, one lubridate module). The full lubridate track
+   (time zones, the timeline-ruler visual) is still to do.
+   Next: **Track 6, Visualization** (plot grading via `ggplot_build()`
+   layers, the layer-stack visual).
 5. Consider adding `filter_out()` / `when_any()` to the filter module.
 6. Write the **lubridate** track and the **janitor** modules (section 4).
 7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
@@ -490,9 +505,21 @@ It runs under webR (`.build_args` set by check.mjs) or native R
   missed every lazily loaded chunk offline. The fix is `ignoreVary: true`.
 - YAML 1.1 again: an anim.yml key `y:` silently became `TRUE`, so the
   second table never loaded. Hence `with:`.
-- Grading errors used to vanish: captureR() with captured conditions turned
-  an R error inside the grader into an empty "Wrong answer". The engine now
-  passes `captureConditions: false`, so such errors are reported.
+- Grading errors used to vanish into an empty "Wrong answer". The engine now
+  grades with captured conditions and `throwJsException: false` (like Run),
+  and if R returns no result it reports the captured R error, reading its
+  message with `conditionMessage()` in R (a condition holds an R call, which
+  webR cannot convert to JS). An earlier attempt, `captureConditions: false`,
+  made webR throw message-less errors.
+- **webR in the browser loads R's time-zone files lazily, and the first one or
+  two date operations of a session fail below R** (even `as.Date("2026-01-02")`;
+  not even `tryCatch()` sees it). Under Node it never happens, so the content
+  check can't catch it. The engine warms up dates, date-times and a time zone
+  at boot, retrying (`#warmUpTimeZones`). If date grading ever breaks again,
+  test the **first** date operation of a fresh session.
+- A verb that renames every column renames the hidden `.id` too:
+  `clean_names()` turned it into `id`. build.R now fails such a step; in an
+  animation use `rename_with(make_clean_names, -.id)`.
 - Captions and prompts are prose, so no check can catch a wrong claim in
   them. A caption said `<int [2]>` for table2's list-column, but `count` is
   a double (`<dbl [2]>`); it was only caught by looking at the animation.

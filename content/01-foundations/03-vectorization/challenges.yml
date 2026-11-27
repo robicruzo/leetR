@@ -1,0 +1,82 @@
+- id: vz-kg
+  tier: warm-up
+  type: write
+  skill: vz-elementwise
+  prompt: "Every penguin's body mass in kilograms, as a numeric vector."
+  hint: "Divide the whole column at once; no loop needed."
+  solution: |
+    penguins$body_mass_g / 1000
+
+- id: vz-max-na
+  tier: warm-up
+  type: predict
+  skill: vz-reduce
+  prompt: "The longest flipper is 231 mm, and 2 penguins have no flipper measurement. What does this return?"
+  code: |
+    max(penguins$flipper_length_mm)
+  options: ["NA", "231", "An error"]
+  verify: 'result'
+  explain: "One unknown value makes the maximum unknown too, so max() returns NA. max(x, na.rm = TRUE) skips the NAs and gives 231."
+
+- id: vz-bill-ratio
+  tier: core
+  type: write
+  skill: vz-elementwise
+  prompt: "Every penguin's bill length divided by its bill depth, as a numeric vector."
+  hint: "Two columns of the same length divide element by element."
+  solution: |
+    penguins$bill_length_mm / penguins$bill_depth_mm
+
+- id: vz-big-small
+  tier: core
+  type: write
+  skill: vz-ifelse
+  prompt: "A character vector: \"big\" where the flipper is longer than 200 mm, \"small\" otherwise, and NA where the length is unknown."
+  hint: "if_else() takes a whole condition vector and picks a value for each element."
+  solution: |
+    if_else(penguins$flipper_length_mm > 200, "big", "small")
+
+- id: vz-fix-if
+  tier: core
+  type: fix
+  skill: vz-ifelse
+  prompt: "This should label every penguin \"heavy\" (over 4,000 g) or \"light\". Fix it."
+  hint: "Read the error. if () wants one TRUE or FALSE; which function works element by element?"
+  starter: |
+    if (penguins$body_mass_g > 4000) "heavy" else "light"
+  solution: |
+    if_else(penguins$body_mass_g > 4000, "heavy", "light")
+
+- id: vz-standardise
+  tier: stretch
+  type: write
+  skill: vz-recycle
+  prompt: "Standardise body mass: subtract the mean mass and divide by the standard deviation (ignoring NAs). Return the vector."
+  hint: "mean() and sd() each give one number, recycled across all 344 values."
+  solution: |
+    (penguins$body_mass_g - mean(penguins$body_mass_g, na.rm = TRUE)) /
+      sd(penguins$body_mass_g, na.rm = TRUE)
+
+- id: vz-times-pair
+  tier: stretch
+  type: predict
+  skill: vz-recycle
+  prompt: "The first four body masses are 3750, 3800, 3250 and NA. What does this return?"
+  code: |
+    penguins$body_mass_g[1:4] * c(1, 0)
+  options: ["3750, 0, 3250, NA", "3750, 0, 3250, 0", "3750, 0", "An error"]
+  verify: 'paste(result, collapse = ", ")'
+  explain: "c(1, 0) is recycled to 1, 0, 1, 0. The fourth mass is unknown, and an unknown number times 0 is still unknown, so it stays NA."
+
+- id: vz-cv
+  tier: brain-melter
+  type: write
+  skill: vz-reduce
+  prompt: >-
+    For every numeric column of penguins, the coefficient of variation: the
+    standard deviation divided by the mean, ignoring NAs. Return a named
+    numeric vector.
+  hint: "Pick the numeric columns with penguins[sapply(penguins, is.numeric)], then apply a function that reduces each column to sd / mean."
+  solution: |
+    sapply(penguins[sapply(penguins, is.numeric)],
+           function(x) sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE))

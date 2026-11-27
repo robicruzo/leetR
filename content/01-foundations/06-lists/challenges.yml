@@ -1,0 +1,85 @@
+- id: ls-length-starwars
+  tier: warm-up
+  type: predict
+  skill: ls-df
+  data: starwars
+  prompt: "starwars has 87 rows and 14 columns. What does this return?"
+  code: |
+    length(starwars)
+  options: ["14", "87", "1218"]
+  verify: 'result'
+  explain: "A data frame is a list of its columns, so length() counts the 14 columns."
+
+- id: ls-luke-vehicles
+  tier: warm-up
+  type: write
+  skill: ls-bracket
+  data: starwars
+  prompt: "The vehicles of the first character in starwars, as a character vector."
+  hint: "vehicles is a list-column. [[1]] takes out the first element itself."
+  solution: |
+    starwars$vehicles[[1]]
+
+- id: ls-film-counts
+  tier: core
+  type: write
+  skill: ls-listcol
+  data: starwars
+  prompt: "The number of films each starwars character appears in, as an integer vector."
+  hint: "lengths() measures every element of a list at once."
+  solution: |
+    lengths(starwars$films)
+
+- id: ls-make-summary
+  tier: core
+  type: write
+  skill: ls-make
+  prompt: "A list with two named elements: n, the number of penguins, and species, the distinct species (as a factor)."
+  hint: "list(n = …, species = …). unique() keeps a factor a factor."
+  solution: |
+    list(n = nrow(penguins), species = unique(penguins$species))
+
+- id: ls-fix-single
+  tier: core
+  type: fix
+  skill: ls-bracket
+  data: starwars
+  prompt: "This should return the first character's films as a character vector, but it returns a list. Fix it."
+  hint: "Which bracket takes the element out of the list?"
+  starter: |
+    starwars$films[1]
+  solution: |
+    starwars$films[[1]]
+
+- id: ls-new-hope
+  tier: stretch
+  type: write
+  skill: ls-listcol
+  data: starwars
+  prompt: "The names of the characters who appear in \"A New Hope\"."
+  hint: "For each element of films, ask whether \"A New Hope\" %in% it. sapply() returns one TRUE or FALSE per character."
+  solution: |
+    starwars$name[sapply(starwars$films, function(f) "A New Hope" %in% f)]
+
+- id: ls-nested-predict
+  tier: stretch
+  type: predict
+  skill: ls-bracket
+  prompt: "What does this return?"
+  code: |
+    list(a = 1, b = list(c = 2))$b$c
+  options: ["2", "list(c = 2)", "NULL"]
+  verify: 'result'
+  explain: "$b takes out the inner list, and $c takes 2 out of that. Each $ goes one level deeper."
+
+- id: ls-film-table
+  tier: brain-melter
+  type: write
+  skill: ls-listcol
+  data: starwars
+  prompt: "How many starwars characters appear in each film? Return a tibble with columns film and n, most first."
+  hint: "unlist() pours all the film vectors into one; put that in a tibble and count."
+  solution: |
+    tibble(film = unlist(starwars$films)) |>
+      count(film, sort = TRUE)
+  compare: {ignore_row_order: true}

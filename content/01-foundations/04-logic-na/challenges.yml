@@ -1,0 +1,80 @@
+- id: lg-missing-mass
+  tier: warm-up
+  type: write
+  skill: lg-isna
+  prompt: "A logical vector: TRUE where a penguin's body mass is missing."
+  hint: "is.na() checks every element."
+  solution: |
+    is.na(penguins$body_mass_g)
+
+- id: lg-bill-predict
+  tier: warm-up
+  type: predict
+  skill: lg-na
+  prompt: "Penguin 4 has no bill measurement. What does this return?"
+  code: |
+    penguins$bill_length_mm[4] > 40
+  options: ["NA", "FALSE", "TRUE"]
+  verify: 'result'
+  explain: "An unknown length might or might not be above 40, so the comparison is unknown too: NA."
+
+- id: lg-heavy-gentoo
+  tier: core
+  type: write
+  skill: lg-ops
+  prompt: "A logical vector: TRUE for Gentoo penguins heavier than 5,000 g."
+  hint: "Two conditions joined with &."
+  solution: |
+    penguins$species == "Gentoo" & penguins$body_mass_g > 5000
+
+- id: lg-torgersen-share
+  tier: core
+  type: write
+  skill: lg-na
+  prompt: "Of the Torgersen penguins with a known body mass, what share weigh over 4,000 g? Return one number."
+  hint: "Pick the Torgersen masses with a logical index, compare, and take the mean with na.rm = TRUE."
+  solution: |
+    mean(penguins$body_mass_g[penguins$island == "Torgersen"] > 4000, na.rm = TRUE)
+
+- id: lg-fix-count-na
+  tier: core
+  type: fix
+  skill: lg-isna
+  prompt: "This should count the penguins with unknown sex, but it returns NA. Fix it."
+  hint: "What does any comparison with NA give?"
+  starter: |
+    sum(penguins$sex == NA)
+  solution: |
+    sum(is.na(penguins$sex))
+
+- id: lg-three-predict
+  tier: stretch
+  type: predict
+  skill: lg-three
+  prompt: "What does this return?"
+  code: |
+    c(TRUE, NA, FALSE) | c(NA, NA, TRUE)
+  options: ["TRUE, NA, TRUE", "NA, NA, TRUE", "TRUE, NA, FALSE", "NA, NA, NA"]
+  verify: 'paste(result, collapse = ", ")'
+  explain: "Element by element: TRUE | NA is TRUE (one TRUE is enough), NA | NA is unknown, and FALSE | TRUE is TRUE."
+
+- id: lg-long-flippers
+  tier: stretch
+  type: constrained
+  skill: lg-na
+  prompt: "Count the penguins whose flipper is longer than 210 mm, treating an unknown length as not longer, without na.rm."
+  hint: "Make the unknowns FALSE yourself: & !is.na() turns their NA into FALSE."
+  solution: |
+    sum(penguins$flipper_length_mm > 210 & !is.na(penguins$flipper_length_mm))
+  forbid: ["na.rm"]
+
+- id: lg-unknown-or
+  tier: brain-melter
+  type: write
+  skill: lg-three
+  prompt: >-
+    For which penguins is bill_length_mm > 50 | flipper_length_mm > 220
+    unknown (NA)? Return their positions (row numbers) as an integer vector.
+  hint: "An | is only unknown when neither side is TRUE and at least one side is NA. which() turns TRUEs into positions."
+  solution: |
+    which(is.na(penguins$bill_length_mm > 50 | penguins$flipper_length_mm > 220))

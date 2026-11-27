@@ -1,0 +1,142 @@
+id: realdata
+number: 5
+title: "Real-world data: import, counts, strings, factors, dates"
+summary: >-
+  The data types that real files are full of. Read and clean messy files,
+  turn counts into the right proportions, work with strings and regular
+  expressions, control categories with factors, and parse and compute with
+  dates and times.
+needs: [wrangling]
+modules: [01-import-clean, 02-counts-props, 03-strings, 04-regex, 05-factors, 06-dates]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-read-na
+    skill: im-guess
+    module: 01-import-clean
+    ask: "A CSV column holds 4, 7, n/a and 9. What class does read_csv() give it, with default settings?"
+    options:
+      - {choice: "character", correct: true}
+      - {choice: "numeric", misconception: na-strings-recognised}
+      - {choice: "logical", misconception: missing-means-logical}
+    verify: 'class(readr::read_csv(I("x\n4\n7\nn/a\n9"), show_col_types = FALSE)$x)'
+  - id: d-props
+    skill: cp-conditional
+    module: 02-counts-props
+    ask: "After count(species, sex) |> mutate(prop = n / sum(n), .by = species), what do all the props add up to?"
+    options:
+      - {choice: "3, one per species", correct: true}
+      - {choice: "1", misconception: by-ignored}
+      - {choice: "344", misconception: props-are-counts}
+  - id: d-str-c
+    skill: st-combine
+    module: 03-strings
+    ask: "What does str_c(\"id-\", NA) return?"
+    options:
+      - {choice: "NA", correct: true}
+      - {choice: "\"id-NA\"", misconception: str-c-is-paste}
+      - {choice: "\"id-\"", misconception: na-skipped}
+    verify: 'stringr::str_c("id-", NA)'
+  - id: d-regex-dot
+    skill: rx-literal
+    module: 04-regex
+    ask: "Does str_detect(\"ab\", \"a.b\") return TRUE?"
+    options:
+      - {choice: "No: . needs one character between a and b", correct: true}
+      - {choice: "Yes: . can match nothing", misconception: dot-optional}
+      - {choice: "No, because there is no dot in \"ab\"", misconception: dot-is-literal}
+  - id: d-levels
+    skill: fc-levels
+    module: 05-factors
+    ask: "What is the first level of factor(c(\"small\", \"large\"))?"
+    options:
+      - {choice: "large", correct: true}
+      - {choice: "small", misconception: levels-in-appearance-order}
+    verify: 'levels(factor(c("small", "large")))[1]'
+  - id: d-dmy
+    skill: dt-parse
+    module: 06-dates
+    ask: "Which date is dmy(\"05/06/2026\")?"
+    options:
+      - {choice: "5 June 2026", correct: true}
+      - {choice: "6 May 2026", misconception: parser-reads-month-first}
+      - {choice: "An error", misconception: ambiguous-errors}
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-parse-number
+      skill: im-parse
+      ask: "What does parse_number(\"Total: 1,500 kg\") return?"
+      options:
+        - {choice: "1500", correct: true}
+        - {choice: "NA", misconception: parse-needs-clean}
+        - {choice: "1", misconception: comma-stops}
+      explain: "parse_number() skips text before the number, reads the comma as a thousands separator, and stops at the first character after it."
+      verify: 'readr::parse_number("Total: 1,500 kg")'
+    - id: fin-wt
+      skill: cp-count
+      ask: "planes |> count(manufacturer, wt = seats): what is n?"
+      options:
+        - {choice: "The total number of seats per manufacturer", correct: true}
+        - {choice: "The number of planes per manufacturer", misconception: wt-ignored}
+        - {choice: "The mean number of seats", misconception: wt-means}
+      explain: "wt = makes count() add up a column instead of counting rows: each plane contributes its seats."
+    - id: fin-replace-all
+      skill: st-replace
+      ask: "What does str_replace_all(\"a-b-c\", \"-\", \"\") return?"
+      options:
+        - {choice: "\"abc\"", correct: true}
+        - {choice: "\"ab-c\"", misconception: all-is-first}
+        - {choice: "\"a b c\"", misconception: empty-is-space}
+      explain: "Every - is replaced by the empty string, so they all disappear. str_replace() would remove only the first."
+      verify: 'paste0("\"", stringr::str_replace_all("a-b-c", "-", ""), "\"")'
+    - id: fin-digits
+      skill: rx-class
+      ask: "What does str_extract(\"Flight 1234 to BOS\", \"\\\\d+\") return?"
+      options:
+        - {choice: "\"1234\"", correct: true}
+        - {choice: "\"1\"", misconception: plus-ignored}
+        - {choice: "1234 (a number)", misconception: extract-converts}
+      explain: "\\d+ takes as many digits in a row as it can, and str_extract() always returns text; parse_number() or as.numeric() would make it a number."
+      verify: 'paste0("\"", stringr::str_extract("Flight 1234 to BOS", "\\d+"), "\"")'
+    - id: fin-lump-other
+      skill: fc-lump
+      ask: "f has levels a, b, c, d with counts 50, 30, 15, 5. What are the levels of fct_lump_n(f, n = 2)?"
+      options:
+        - {choice: "a, b, Other", correct: true}
+        - {choice: "a, b", misconception: lump-drops}
+        - {choice: "c, d, Other", misconception: lump-keeps-small}
+      explain: "fct_lump_n() keeps the 2 most frequent levels and puts all the rest into one new level, Other."
+      verify: 'paste(levels(forcats::fct_lump_n(factor(rep(c("a", "b", "c", "d"), c(50, 30, 15, 5))), n = 2)), collapse = ", ") == "a, b, Other"'
+    - id: fin-m-plus
+      skill: dt-arith
+      ask: "What is ymd(\"2026-03-31\") %m+% months(1)?"
+      options:
+        - {choice: "2026-04-30", correct: true}
+        - {choice: "NA", misconception: m-plus-is-plus}
+        - {choice: "2026-05-01", misconception: months-roll-over}
+      explain: "There is no 31 April. Plain + months(1) would give NA; %m+% rolls back to the last valid day of the month."
+      verify: 'as.character(ymd("2026-03-31") %m+% months(1)) == "2026-04-30"'
+  integrative:
+    id: fin-airline-shares
+    data: flights
+    uses: [airlines]
+    prompt: >-
+      Each airline's share of New York's 2013 flights, labelled with its
+      name minus the company suffix (" Inc.", " Co." or " Corporation"), so
+      "Delta Air Lines Inc." becomes "Delta Air Lines". Return name and share,
+      largest first.
+    hint: >-
+      Count flights per carrier, join airlines for the names, strip the
+      suffix with a regex anchored at the end, " (Inc\\.|Co\\.|Corporation)$",
+      then share = n / sum(n).
+    solution: |
+      flights |>
+        count(carrier) |>
+        left_join(airlines, join_by(carrier)) |>
+        mutate(name = str_remove(name, " (Inc\\.|Co\\.|Corporation)$"),
+               share = n / sum(n)) |>
+        select(name, share) |>
+        arrange(desc(share))

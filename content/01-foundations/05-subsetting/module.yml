@@ -1,0 +1,72 @@
+id: 05-subsetting
+title: "Subsetting with [ ], [[ ]] and $"
+key_idea: >-
+  [ ] picks elements by position (x[2]), by exclusion (x[-2]), by a logical
+  vector (x[x > 6]) or by name. A logical index keeps the TRUEs, but an NA in
+  it gives an NA in the result. On a data frame, [ ] keeps a data frame
+  (df["col"], df[rows, cols]), while [[ ]] and $ pull out one column as a
+  plain vector.
+subskills:
+  - {id: sb-index, name: "Positive positions pick, negative ones drop"}
+  - {id: sb-logical, name: "A logical index keeps TRUEs; NA gives NA"}
+  - {id: sb-names, name: "Pick by name"}
+  - {id: sb-df, name: "[ ] keeps a data frame; [[ ]] and $ give a vector"}
+readings:
+  - {label: "Advanced R 4, Subsetting", url: "https://adv-r.hadley.nz/subsetting.html"}
+  - {label: "r4ds 27.2, Selecting multiple elements with [", url: "https://r4ds.hadley.nz/base-r.html#sec-subset-many"}
+  - {label: "STAT 7500 primer ch. 2 (data basics)", url: ""}
+
+predict:
+  skill: sb-index
+  code: |
+    c(10, 20, 30, 40)[-2]
+  ask: "What does this return?"
+  options:
+    - {choice: "10, 30, 40", correct: true}
+    - choice: "30"
+      misconception: negative-counts-from-end
+      probe: "In Python, -2 means the second from the end. Does a minus sign mean the same thing in R?"
+    - choice: "20"
+      misconception: negative-is-select
+      probe: "x[2] gives 20. What should the minus sign change?"
+    - choice: "An error"
+      misconception: negative-invalid
+      probe: "Is there anything wrong with leaving out one element?"
+  verify: 'paste(result, collapse = ", ")'
+
+probes:
+  - id: p-df-bracket
+    skill: sb-df
+    ask: "What does penguins[\"species\"] return?"
+    options:
+      - {choice: "A tibble with one column, species", correct: true}
+      - choice: "The species factor, 344 values long"
+        misconception: single-bracket-extracts
+        probe: "[ ] on a data frame keeps the container. Which operator takes the column out?"
+      - choice: "The first row"
+        misconception: string-index-is-row
+        probe: "With one index and no comma, does [ ] pick rows or columns of a data frame?"
+    right_followup: "Are you sure? Then what do penguins[[\"species\"]] and penguins$species return?"
+    explain: >-
+      A data frame is a list of columns, and [ ] with one index picks
+      columns but keeps the data frame around them. [["species"]] and
+      $species take the single column out, as a plain vector (here, a factor).
+    verify: 'is.data.frame(penguins["species"]) && ncol(penguins["species"]) == 1'
+  - id: p-na-index
+    skill: sb-logical
+    ask: "x <- c(5, NA, 8). What does x[x > 6] return?"
+    options:
+      - {choice: "NA, 8", correct: true}
+      - choice: "8"
+        misconception: na-index-drops
+        probe: "x > 6 is FALSE, NA, TRUE. What should R return for the element it can't decide about?"
+      - choice: "An error"
+        misconception: na-index-errors
+        probe: "Is an NA in an index allowed, or does it stop?"
+    right_followup: "Are you sure? How do you get just 8, without the NA?"
+    explain: >-
+      An NA in a logical index gives an NA in the result: R can't tell
+      whether that element should be kept. Use x[which(x > 6)] or
+      x[x > 6 & !is.na(x)], or filter() for data frames, which drops NA
+      conditions.
+    verify: 'identical(c(5, NA, 8)[c(5, NA, 8) > 6], c(NA, 8))'

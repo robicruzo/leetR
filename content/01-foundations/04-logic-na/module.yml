@@ -1,0 +1,67 @@
+id: 04-logic-na
+title: "Logical operators and NA: the value that isn't known"
+key_idea: >-
+  & (and), | (or) and ! (not) combine conditions element by element. NA
+  means "unknown", and it spreads: NA > 1 is NA, because an unknown number
+  might or might not be above 1. But not always: NA & FALSE is FALSE and
+  NA | TRUE is TRUE, because the answer is known either way. x == NA is
+  always NA, so test for missing values with is.na().
+subskills:
+  - {id: lg-ops, name: "& | ! combine conditions element by element"}
+  - {id: lg-na, name: "NA spreads through comparisons and arithmetic"}
+  - {id: lg-three, name: "NA & FALSE is FALSE; NA | TRUE is TRUE"}
+  - {id: lg-isna, name: "== NA never works: use is.na()"}
+readings:
+  - {label: "r4ds 12.2–12.3, Comparisons and Boolean algebra", url: "https://r4ds.hadley.nz/logicals.html#comparisons"}
+  - {label: "Advanced R 3.2.3, Missing values", url: "https://adv-r.hadley.nz/vectors-chap.html#missing-values"}
+  - {label: "STAT 7500 primer appendix B (gotchas)", url: ""}
+
+predict:
+  skill: lg-three
+  code: |
+    NA & FALSE
+  ask: "What does this return?"
+  options:
+    - {choice: "FALSE", correct: true}
+    - choice: "NA"
+      misconception: na-always-spreads
+      probe: "& is TRUE only when both sides are TRUE. With one side FALSE, could the unknown side ever make it TRUE?"
+    - choice: "TRUE"
+      misconception: na-is-true
+      probe: "Is an unknown value the same as TRUE?"
+  verify: 'result'
+
+probes:
+  - id: p-eq-na
+    skill: lg-isna
+    ask: "x <- c(1, NA, 3). What does sum(x == NA) return?"
+    options:
+      - {choice: "NA", correct: true}
+      - choice: "1"
+        misconception: eq-na-finds-na
+        probe: "Is 1 == NA known? Is NA == NA known? What does each comparison give?"
+      - choice: "0"
+        misconception: eq-na-is-false
+        probe: "Comparing anything with an unknown: is the result FALSE, or unknown?"
+    right_followup: "Are you sure? What would sum(is.na(x)) give?"
+    explain: >-
+      Every comparison with NA is NA, even NA == NA (two unknowns may or may
+      not be equal). So x == NA is NA, NA, NA and its sum is NA. is.na(x)
+      asks the real question and gives FALSE, TRUE, FALSE: sum 1.
+    verify: 'is.na(sum(c(1, NA, 3) == NA))'
+  - id: p-or-na
+    skill: lg-three
+    ask: "What does NA | TRUE return?"
+    options:
+      - {choice: "TRUE", correct: true}
+      - choice: "NA"
+        misconception: na-always-spreads
+        probe: "| is TRUE when at least one side is TRUE. One side is TRUE already: does the other side matter?"
+      - choice: "FALSE"
+        misconception: na-is-false
+        probe: "Is NA the same as FALSE?"
+    right_followup: "Are you sure? Then what is NA | FALSE?"
+    explain: >-
+      With | one TRUE is enough, so NA | TRUE is TRUE whatever the unknown
+      is. NA | FALSE depends entirely on the unknown, so it is NA.
+    verify: 'NA | TRUE'

@@ -1,0 +1,20 @@
+data: 'tibble(x = c(3, NA, 0, 7))'
+steps:
+  - code: ""
+    show: "x <- c(3, NA, 0, 7)"
+    caption: "Four values; the second is unknown."
+  - code: 'mutate(`x > 1` = x > 1)'
+    show: "x > 1"
+    caption: "A comparison gives one TRUE or FALSE per element. Is an unknown number above 1? Unknown: NA."
+    skill: lg-na
+  - code: 'mutate(`x > 1 & x < 5` = x > 1 & x < 5)'
+    show: "x > 1 & x < 5"
+    caption: "& is TRUE only if both sides are. For the NA row, x < 5 is also NA, so the answer stays unknown."
+    skill: lg-ops
+  - code: 'mutate(`x == NA` = x == NA)'
+    show: "x == NA"
+    caption: "Comparing with NA is always NA, even for the NA row itself. This can never find missing values."
+  - code: 'mutate(`is.na(x)` = is.na(x))'
+    show: "is.na(x)"
+    caption: "is.na() asks the real question, and it never returns NA: one TRUE, three FALSE."
+    skill: lg-isna

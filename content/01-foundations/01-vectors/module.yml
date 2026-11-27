@@ -1,0 +1,71 @@
+id: 01-vectors
+title: "Atomic vectors: the values everything is made of"
+key_idea: >-
+  Almost every value in R is a vector: a row of values of one type. The four
+  everyday types are logical (TRUE), integer (2L), double (3.5) and
+  character ("a"). A single number is a vector of length 1, c() glues
+  vectors into a longer one, and typeof() tells you how the values are
+  stored, which is not always what they look like.
+subskills:
+  - {id: vt-kinds, name: "Four types: logical, integer, double, character"}
+  - {id: vt-typeof, name: "typeof() shows how values are stored"}
+  - {id: vt-c, name: "c() combines vectors into one, flat"}
+  - {id: vt-length, name: "length() counts elements; one value is length 1"}
+readings:
+  - {label: "Advanced R 3.2, Atomic vectors", url: "https://adv-r.hadley.nz/vectors-chap.html#atomic-vectors"}
+  - {label: "r4ds 12–13, Logical vectors and numbers", url: "https://r4ds.hadley.nz/logicals.html"}
+  - {label: "STAT 7500 primer ch. 2 (data basics)", url: ""}
+
+predict:
+  skill: vt-typeof
+  code: |
+    typeof(c(1, 2, 3))
+  ask: "What does this return?"
+  options:
+    - {choice: "double", correct: true}
+    - choice: "integer"
+      misconception: whole-numbers-are-integers
+      probe: "R writes an integer as 2L. Is the 1 you typed the same as 1L?"
+    - choice: "numeric"
+      misconception: class-is-type
+      probe: "\"numeric\" is what class() and is.numeric() talk about. Which word does typeof() use for the storage?"
+    - choice: "vector"
+      misconception: vector-is-a-type
+      probe: "Every value here is a vector. typeof() names what kind of values the vector holds: which kind?"
+  verify: 'result'
+
+probes:
+  - id: p-c-flat
+    skill: vt-c
+    ask: "What is length(c(1:3, c(4, 5)))?"
+    options:
+      - {choice: "5", correct: true}
+      - choice: "2"
+        misconception: c-nests
+        probe: "Does c() keep its two pieces as two items, or pour their values into one vector?"
+      - choice: "3"
+        misconception: inner-c-is-one
+        probe: "c(4, 5) holds two values. When it goes into the outer c(), does it count as one or as two?"
+    right_followup: "Are you sure? What would length(list(1:3, c(4, 5))) be, and why is that different?"
+    explain: >-
+      c() flattens: it takes the values out of its pieces and makes one
+      vector, 1, 2, 3, 4, 5. A list is the structure that keeps pieces
+      separate (module 6).
+    verify: 'length(c(1:3, c(4, 5)))'
+  - id: p-factor-type
+    skill: vt-typeof
+    ask: "penguins$species prints as Adelie, Gentoo, Chinstrap. What does typeof(penguins$species) return?"
+    options:
+      - {choice: "integer", correct: true}
+      - choice: "character"
+        misconception: looks-like-text
+        probe: "A factor prints its labels. How might R store 344 values that only ever take 3 labels?"
+      - choice: "factor"
+        misconception: class-is-type
+        probe: "\"factor\" is a class. What type of values sits underneath it?"
+    right_followup: "Are you sure? What does class(penguins$species) return, and why do the two disagree?"
+    explain: >-
+      A factor stores each value as an integer code (1, 2, 3) and keeps the
+      labels separately, in levels(). typeof() shows the storage, integer;
+      class() shows what the vector acts as, factor.
+    verify: 'typeof(penguins$species)'

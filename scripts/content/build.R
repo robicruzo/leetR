@@ -133,6 +133,14 @@ build_anim <- function(a, mod_id) {
       cur$.id <- ifelse(is.na(xid), yid, ifelse(is.na(yid), xid, paste0(xid, "+", yid)))
       cur$.yid <- NULL
     } else if (!".id" %in% names(cur)) {
+      # A step that keeps the rows must keep the row keys. If .id vanished
+      # while a new column appeared, the step renamed it (clean_names() turns
+      # .id into id): fail, or the key would show up as a visible column.
+      renamed <- setdiff(names(cur), names(base))
+      if (nrow(cur) == nrow(base) && ".id" %in% names(base) && length(renamed) && ncol(cur) == ncol(base)) {
+        problem(where, ": the step renamed the hidden .id column (to ", paste(renamed, collapse = ", "),
+                "); leave it alone, e.g. rename_with(f, -.id)")
+      }
       if (nrow(cur) == nrow(base)) cur$.id <- base$.id else problem(where, ": rows changed without a merge, split, widen or join")
     }
     if (".id" %in% names(cur)) {

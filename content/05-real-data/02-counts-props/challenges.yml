@@ -1,0 +1,101 @@
+- id: cp-island-counts
+  tier: warm-up
+  type: write
+  skill: cp-count
+  prompt: "Count the penguins on each island, most first."
+  hint: "count() has a sort argument."
+  solution: |
+    penguins |>
+      count(island, sort = TRUE)
+
+- id: cp-island-shares
+  tier: warm-up
+  type: write
+  skill: cp-marginal
+  prompt: "Each island's share of all penguins: columns island, n and prop."
+  hint: "Count, then divide each n by the total."
+  solution: |
+    penguins |>
+      count(island) |>
+      mutate(prop = n / sum(n))
+
+- id: cp-sex-within-species
+  tier: core
+  type: write
+  skill: cp-conditional
+  prompt: "For each species, the share of females and males among the penguins of known sex: columns species, sex, n and prop."
+  hint: "Drop the unknown sexes, count both variables, then compute n / sum(n) within each species."
+  solution: |
+    penguins |>
+      filter(!is.na(sex)) |>
+      count(species, sex) |>
+      mutate(prop = n / sum(n), .by = species)
+
+- id: cp-seats
+  tier: core
+  type: write
+  skill: cp-count
+  data: planes
+  prompt: "Total seats per plane manufacturer in planes, most first, as columns manufacturer and n."
+  hint: "count(wt = seats) adds up seats instead of counting rows."
+  solution: |
+    planes |>
+      count(manufacturer, wt = seats, sort = TRUE)
+
+- id: cp-fix-within
+  tier: core
+  type: fix
+  skill: cp-conditional
+  prompt: "This should give each island's share within its species (the props of each species add up to 1), but all the props together add up to 1. Fix it."
+  hint: "Which rows should sum(n) add up?"
+  starter: |
+    penguins |>
+      count(species, island) |>
+      mutate(prop = n / sum(n))
+  solution: |
+    penguins |>
+      count(species, island) |>
+      mutate(prop = n / sum(n), .by = species)
+
+- id: cp-tabyl-rows
+  tier: stretch
+  type: write
+  skill: cp-tabyl
+  prompt: "A tabyl of species by island showing row percentages, formatted like \"28.9%\"."
+  hint: "tabyl(species, island), then adorn_percentages(\"row\"), then adorn_pct_formatting(). The order matters."
+  solution: |
+    penguins |>
+      tabyl(species, island) |>
+      adorn_percentages("row") |>
+      adorn_pct_formatting()
+
+- id: cp-tabyl-totals
+  tier: stretch
+  type: predict
+  skill: cp-tabyl
+  prompt: "How many rows does this return?"
+  code: |
+    penguins |>
+      tabyl(species, island) |>
+      adorn_totals("row")
+  options: ["4", "3", "5"]
+  verify: 'nrow(result)'
+  explain: "One row per species, plus the Total row that adorn_totals(\"row\") adds at the bottom."
+
+- id: cp-strong-democrats
+  tier: brain-melter
+  type: write
+  skill: cp-conditional
+  data: gss_cat
+  prompt: >-
+    Among religions with at least 100 respondents in gss_cat, which has the
+    highest share of respondents who are "Strong democrat" (partyid)? Return
+    relig and prop for that religion.
+  hint: "Count relig and partyid; within each religion compute prop and the religion's total; keep Strong democrat rows of large religions; take the top one."
+  solution: |
+    gss_cat |>
+      count(relig, partyid) |>
+      mutate(prop = n / sum(n), total = sum(n), .by = relig) |>
+      filter(partyid == "Strong democrat", total >= 100) |>
+      slice_max(prop, n = 1) |>
+      select(relig, prop)

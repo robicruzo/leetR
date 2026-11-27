@@ -1,0 +1,97 @@
+- id: dt-dep-date
+  tier: warm-up
+  type: write
+  skill: dt-make
+  data: flights
+  prompt: "Add dep_date to flights: the date of each flight, built from year, month and day."
+  hint: "make_date() takes the three parts as numbers."
+  solution: |
+    flights |>
+      mutate(dep_date = make_date(year, month, day))
+
+- id: dt-weekday-predict
+  tier: warm-up
+  type: predict
+  skill: dt-components
+  prompt: "What does this return?"
+  code: |
+    wday(ymd("2026-11-27"), label = TRUE)
+  options: ["Fri", "Thu", "Sat"]
+  verify: 'as.character(result)'
+  explain: "27 November 2026 is a Friday. wday(label = TRUE) gives the abbreviated day name as an ordered factor."
+
+- id: dt-flights-weekday
+  tier: core
+  type: write
+  skill: dt-components
+  data: flights
+  prompt: "Count the flights on each day of the week, as columns wday (a labelled day) and n."
+  hint: "count() can create the column it counts: count(wday = wday(time_hour, label = TRUE))."
+  solution: |
+    flights |>
+      count(wday = wday(time_hour, label = TRUE))
+
+- id: dt-flights-week
+  tier: core
+  type: write
+  skill: dt-components
+  data: flights
+  prompt: "Count the flights in each week of 2013, as columns week (the date-time each week starts) and n."
+  hint: "floor_date(time_hour, \"week\") rounds each departure down to the start of its week."
+  solution: |
+    flights |>
+      count(week = floor_date(time_hour, "week"))
+
+- id: dt-fix-storm-dates
+  tier: core
+  type: fix
+  skill: dt-parse
+  data: storms
+  prompt: "This should turn each storm observation's month, day and year into a date, but most dates come out NA. Fix it."
+  hint: "Read the text being built: month first, then day, then year. Which parser matches that order?"
+  starter: |
+    storms |>
+      mutate(date = dmy(str_c(month, "/", day, "/", year)))
+  solution: |
+    storms |>
+      mutate(date = mdy(str_c(month, "/", day, "/", year)))
+
+- id: dt-storm-days
+  tier: stretch
+  type: write
+  skill: dt-arith
+  data: storms
+  prompt: >-
+    For each storm (name and year), how many days passed between its first
+    and its last observation? Return name, year and days, a number.
+  hint: "make_datetime(year, month, day, hour) gives each observation a time; then difftime(max(time), min(time), units = \"days\") per storm, as a number."
+  solution: |
+    storms |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(days = as.numeric(difftime(max(time), min(time), units = "days")),
+                .by = c(name, year))
+  compare: {ignore_row_order: true}
+
+- id: dt-dst-predict
+  tier: stretch
+  type: predict
+  skill: dt-arith
+  prompt: "New York's clocks jumped from 2 am to 3 am on 8 March 2026. What clock time does this return?"
+  code: |
+    ymd_hms("2026-03-07 12:00:00", tz = "America/New_York") + days(1)
+  options: ["2026-03-08 12:00", "2026-03-08 13:00", "2026-03-08 11:00"]
+  verify: 'format(result, "%Y-%m-%d %H:%M")'
+  explain: "days(1) is a period: the same clock time on the next day, 12:00, although only 23 hours passed. ddays(1), a duration of 86,400 seconds, would give 13:00."
+
+- id: dt-weekend-share
+  tier: brain-melter
+  type: write
+  skill: dt-components
+  data: flights
+  prompt: "For each month of 2013, the share of flights that departed on a Saturday or Sunday. Return month and weekend_share."
+  hint: "wday(time_hour, week_start = 1) numbers Monday as 1, so Saturday and Sunday are 6 and 7. The mean of a TRUE/FALSE column is a share."
+  solution: |
+    flights |>
+      mutate(weekend = wday(time_hour, week_start = 1) >= 6) |>
+      summarise(weekend_share = mean(weekend), .by = month)
+  compare: {ignore_row_order: true}

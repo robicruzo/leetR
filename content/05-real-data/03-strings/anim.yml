@@ -1,0 +1,20 @@
+data: starwars |> select(name) |> head(6)
+steps:
+  - code: ""
+    show: "starwars$name"
+    caption: "Six character names: plain strings."
+  - code: "mutate(length = str_length(name))"
+    show: "str_length(name)"
+    caption: "str_length() counts characters, spaces and hyphens included: \"R2-D2\" has 5."
+    skill: st-length
+  - code: "mutate(initial = str_sub(name, 1, 1))"
+    show: "str_sub(name, 1, 1)"
+    caption: "str_sub(name, 1, 1) cuts out characters 1 to 1: each initial."
+  - code: 'mutate(has_r = str_detect(name, "r"))'
+    show: 'str_detect(name, "r")'
+    caption: "str_detect() answers one question per string, as TRUE or FALSE. It is case-sensitive: \"R2-D2\" has no lower-case r."
+    skill: st-detect
+  - code: 'mutate(name = str_replace_all(name, " ", "_"))'
+    show: 'str_replace_all(name, " ", "_")'
+    caption: "str_replace_all() swaps every space for an underscore; str_replace() would only swap the first."
+    skill: st-replace

@@ -1,0 +1,17 @@
+data: 'tibble(tailnum = c("N14228", "N24211", "N619AA", "N804JB", "N668DN", "N39463"))'
+steps:
+  - code: ""
+    show: "flights$tailnum (the first six planes)"
+    caption: "US tail numbers: an N, then digits, and sometimes letters that hint at the airline."
+  - code: 'mutate(`^N` = str_detect(tailnum, "^N"))'
+    show: 'str_detect(tailnum, "^N")'
+    caption: "^N: starts with N. Every US registration does."
+    skill: rx-anchor
+  - code: 'mutate(digits = str_extract(tailnum, "\\d+"))'
+    show: 'str_extract(tailnum, "\\d+")'
+    caption: "\\d+ is one or more digits. str_extract() returns the first match: the number part."
+    skill: rx-class
+  - code: 'mutate(suffix = str_extract(tailnum, "[A-Z]+$"))'
+    show: 'str_extract(tailnum, "[A-Z]+$")'
+    caption: "[A-Z]+$ is one or more capital letters at the very end. AA, JB and DN appear; tail numbers ending in a digit give NA."
+    skill: rx-extract

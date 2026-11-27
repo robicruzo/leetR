@@ -1,0 +1,94 @@
+- id: rx-qu-words
+  tier: warm-up
+  type: write
+  skill: rx-anchor
+  data: words_df
+  prompt: "Keep the words in words_df that start with \"qu\"."
+  hint: "^ anchors a pattern to the start."
+  solution: |
+    words_df |>
+      filter(str_detect(word, "^qu"))
+
+- id: rx-vowel-end
+  tier: warm-up
+  type: write
+  skill: rx-class
+  data: words_df
+  prompt: "Keep the words in words_df that end in a vowel."
+  hint: "[aeiou] is one vowel; $ anchors to the end."
+  solution: |
+    words_df |>
+      filter(str_detect(word, "[aeiou]$"))
+
+- id: rx-tail-suffix
+  tier: core
+  type: write
+  skill: rx-extract
+  data: planes
+  prompt: "Count the planes by the letters at the end of their tailnum (NA when it ends in a digit), most first, as columns suffix and n."
+  hint: "str_extract() with \"[A-Z]+$\", then count."
+  solution: |
+    planes |>
+      mutate(suffix = str_extract(tailnum, "[A-Z]+$")) |>
+      count(suffix, sort = TRUE)
+
+- id: rx-faa-digits
+  tier: core
+  type: write
+  skill: rx-class
+  data: airports
+  prompt: "Keep the airports whose faa code contains a digit."
+  hint: "\\\\d in an R string is any digit."
+  solution: |
+    airports |>
+      filter(str_detect(faa, "\\d"))
+
+- id: rx-fix-dot
+  tier: core
+  type: fix
+  skill: rx-literal
+  data: airports
+  prompt: "This should keep the airports whose name contains a full stop, such as \"St. Louis Downtown Airport\", but it keeps every airport. Fix it."
+  hint: "What does an unescaped . match?"
+  starter: |
+    airports |>
+      filter(str_detect(name, "."))
+  solution: |
+    airports |>
+      filter(str_detect(name, "\\."))
+
+- id: rx-first-word
+  tier: stretch
+  type: write
+  skill: rx-extract
+  data: sentences_df
+  prompt: "Add first_word to sentences_df: the first word of each sentence."
+  hint: "\\\\w+ is one or more word characters; anchor it to the start."
+  solution: |
+    sentences_df |>
+      mutate(first_word = str_extract(sentence, "^\\w+"))
+
+- id: rx-count-predict
+  tier: stretch
+  type: predict
+  skill: rx-class
+  prompt: "What does this return?"
+  code: |
+    str_count("Mississippi", "s+")
+  options: ["2", "4", "1"]
+  verify: 'result'
+  explain: "s+ is one or more s in a row, and each match takes as many as it can: \"ss\", then \"ss\" again. Two matches, though there are four s."
+
+- id: rx-last-first
+  tier: brain-melter
+  type: write
+  skill: rx-extract
+  data: starwars
+  prompt: >-
+    Rewrite starwars names that are exactly two words, such as "Luke
+    Skywalker", as "Skywalker, Luke"; leave every other name unchanged.
+    Return a tibble with the one column name.
+  hint: "Capture the two words with ^(\\\\S+) (\\\\S+)$ and swap them in the replacement with \\\\2, \\\\1."
+  solution: |
+    starwars |>
+      transmute(name = str_replace(name, "^(\\S+) (\\S+)$", "\\2, \\1"))

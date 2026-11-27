@@ -1,0 +1,99 @@
+- id: im-relig-names
+  tier: warm-up
+  type: write
+  skill: im-janitor
+  data: relig_income
+  prompt: "Give relig_income clean, typeable column names with janitor."
+  hint: "One function, no arguments."
+  solution: |
+    relig_income |>
+      clean_names()
+
+- id: im-guess-predict
+  tier: warm-up
+  type: predict
+  skill: im-guess
+  prompt: "What are the classes of the two columns?"
+  code: |
+    read_csv(I("x,y\n1,a\n2,b"), show_col_types = FALSE)
+  options: ["numeric, character", "character, character", "integer, character"]
+  verify: 'paste(sapply(result, class), collapse = ", ")'
+  explain: "read_csv() looks at the values: 1 and 2 parse as numbers, a and b don't. readr reads whole numbers as double (class numeric) unless you ask for integers."
+
+- id: im-read-scores
+  tier: core
+  type: write
+  skill: im-na
+  prompt: "Read raw_scores so that score is numeric and submitted is a date, with every kind of missing value as NA."
+  hint: "Look at the text: which three strings mean missing? Give them to na =."
+  solution: |
+    read_csv(I(raw_scores), na = c("n/a", "-", "missing"), show_col_types = FALSE)
+  # The input is fixed text, not a data frame, so there is nothing to re-run on.
+  robust: false
+
+- id: im-income-bounds
+  tier: core
+  type: write
+  skill: im-parse
+  data: relig_income
+  prompt: >-
+    Make relig_income long (religion, income, count), then add lower: the
+    number at the start of each income band, such as 10 for "$10-20k"
+    (NA for "Don't know/refused").
+  hint: "parse_number() skips the $ and < and stops at the first non-number."
+  solution: |
+    relig_income |>
+      pivot_longer(!religion, names_to = "income", values_to = "count") |>
+      mutate(lower = parse_number(income))
+
+- id: im-fix-mean-score
+  tier: core
+  type: fix
+  skill: im-guess
+  prompt: "This should return the mean score in raw_scores, ignoring missing ones, but it returns NA with a warning. Fix the reading."
+  hint: "The mean fails because score is text. Why did read_csv() read it as text?"
+  starter: |
+    scores <- read_csv(I(raw_scores), show_col_types = FALSE)
+    mean(scores$score, na.rm = TRUE)
+  solution: |
+    scores <- read_csv(I(raw_scores), na = c("n/a", "-", "missing"), show_col_types = FALSE)
+    mean(scores$score, na.rm = TRUE)
+  # Fixed text input: nothing to re-run on half of.
+  robust: false
+
+- id: im-starwars-dupes
+  tier: stretch
+  type: write
+  skill: im-janitor
+  data: starwars
+  prompt: "Which combinations of species and homeworld appear more than once in starwars? Return those rows with janitor's get_dupes()."
+  hint: "get_dupes(data, columns…) returns the repeated rows plus a dupe_count column."
+  solution: |
+    starwars |>
+      get_dupes(species, homeworld)
+
+- id: im-parse-predict
+  tier: stretch
+  type: predict
+  skill: im-parse
+  prompt: "What does this return (ignoring the warning)?"
+  code: |
+    parse_number(c("$1,234", "12%", "n/a"))
+  options: ["1234, 12, NA", "1, 12, NA", "NA, 12, NA"]
+  verify: 'paste(result, collapse = ", ")'
+  explain: "parse_number() skips leading symbols like $, understands the comma as a thousands separator, and stops at the first character after the number. \"n/a\" has no number, so it becomes NA with a warning."
+
+- id: im-clean-messy
+  tier: brain-melter
+  type: write
+  skill: im-janitor
+  prompt: >-
+    Read raw_messy, give it clean names, and drop the empty row and the empty
+    column, all in one pipeline.
+  hint: "read_csv(I(…)), then two janitor functions."
+  solution: |
+    read_csv(I(raw_messy), show_col_types = FALSE) |>
+      clean_names() |>
+      remove_empty(c("rows", "cols"))
+  # Fixed text input: nothing to re-run on half of.
+  robust: false

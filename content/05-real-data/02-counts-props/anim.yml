@@ -1,0 +1,24 @@
+data: penguins_sample |> select(species, island)
+steps:
+  - code: ""
+    show: penguins_sample
+    tint: species
+    caption: "Eight penguins: species and island."
+  - code: "count(species)"
+    merge: {by: [species], pour: {"n": island}}
+    tint: species
+    caption: "count() collapses each species into one row with its count, n."
+    skill: cp-count
+  - code: "mutate(prop = n / sum(n))"
+    tint: species
+    caption: "n / sum(n): each species' share of all 8 penguins. These marginal proportions add up to 1."
+    skill: cp-marginal
+  - from_data: true
+    code: "count(species, island)"
+    merge: {by: [species, island], pour: {"n": island}}
+    tint: species
+    caption: "Counting two variables gives one row per combination that occurs: the joint counts."
+  - code: "mutate(prop = n / sum(n), .by = species)"
+    tint: species
+    caption: "With .by = species, sum(n) is the total of each species, so prop is the share of each island within a species. Every species adds up to 1: conditional proportions."
+    skill: cp-conditional

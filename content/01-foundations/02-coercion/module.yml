@@ -1,0 +1,72 @@
+id: 02-coercion
+title: "Coercion: when R changes a value's type"
+key_idea: >-
+  A vector holds one type, so when you combine types R converts them all to
+  the most flexible one: logical → integer → double → character. Logicals
+  turn into 1 and 0, which is why sum() of a condition counts it and mean()
+  gives a proportion. Converting on purpose uses as.*(); what can't convert
+  becomes NA with a warning. A factor converts to its integer codes, not its
+  labels.
+subskills:
+  - {id: co-auto, name: "c() converts everything to the most flexible type"}
+  - {id: co-explicit, name: "as.*() converts; failures become NA"}
+  - {id: co-logical-math, name: "TRUE is 1: sum() counts, mean() gives a share"}
+  - {id: co-factor, name: "as.numeric() on a factor gives its codes"}
+readings:
+  - {label: "Advanced R 3.2.4, Testing and coercion", url: "https://adv-r.hadley.nz/vectors-chap.html#testing-and-coercion"}
+  - {label: "r4ds 12.4, Summaries (sum and mean of logicals)", url: "https://r4ds.hadley.nz/logicals.html#sec-logical-summaries"}
+  - {label: "STAT 7500 primer ch. 2 (data basics)", url: ""}
+
+predict:
+  skill: co-auto
+  code: |
+    typeof(c(1, "2", TRUE))
+  ask: "One double, one character, one logical. What does this return?"
+  options:
+    - {choice: "character", correct: true}
+    - choice: "double"
+      misconception: converts-to-number
+      probe: "\"2\" looks like a number, but could every value of any character vector be stored as a number?"
+    - choice: "logical"
+      misconception: converts-to-simplest
+      probe: "Which type can hold all three values without losing anything: logical or character?"
+    - choice: "An error: a vector needs one type"
+      misconception: mixing-errors
+      probe: "R needs one type, yes. Does it stop, or pick one and convert?"
+  verify: 'result'
+
+probes:
+  - id: p-sum-logical
+    skill: co-logical-math
+    ask: "What does sum(penguins$body_mass_g > 4000, na.rm = TRUE) return?"
+    options:
+      - {choice: "172, the number of penguins over 4,000 g", correct: true}
+      - choice: "The total mass of the heavy penguins"
+        misconception: sum-of-condition-sums-values
+        probe: "body_mass_g > 4000 is a vector of TRUE and FALSE. What does sum() add up?"
+      - choice: "An error: you can't add up TRUE and FALSE"
+        misconception: logicals-arent-numbers
+        probe: "When a logical has to act as a number, what do TRUE and FALSE become?"
+    right_followup: "Are you sure? Then what does mean() of the same condition give?"
+    explain: >-
+      In arithmetic TRUE becomes 1 and FALSE becomes 0, so sum() of a
+      condition counts the TRUEs. mean() of it is the share of TRUEs, a
+      proportion.
+    verify: 'sum(penguins$body_mass_g > 4000, na.rm = TRUE) == 172'
+  - id: p-factor-codes
+    skill: co-factor
+    ask: "f <- factor(c(\"10\", \"5\", \"10\")). What does as.numeric(f) return?"
+    options:
+      - {choice: "1, 2, 1", correct: true}
+      - choice: "10, 5, 10"
+        misconception: factor-numeric-is-labels
+        probe: "A factor stores integer codes plus labels. Which of the two does as.numeric() see?"
+      - choice: "2, 1, 2"
+        misconception: levels-sorted-numerically
+        probe: "The levels are sorted as text. As text, which comes first, \"10\" or \"5\"?"
+    right_followup: "Are you sure? How would you get 10, 5, 10 back?"
+    explain: >-
+      as.numeric() on a factor returns the codes. The levels are sorted as
+      text, "10" before "5", so "10" is code 1 and "5" is code 2. To get the
+      labels as numbers, go through text: as.numeric(as.character(f)).
+    verify: 'paste(as.numeric(factor(c("10", "5", "10"))), collapse = ", ")'

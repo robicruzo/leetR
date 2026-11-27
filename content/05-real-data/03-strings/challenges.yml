@@ -1,0 +1,94 @@
+- id: st-name-length
+  tier: warm-up
+  type: write
+  skill: st-length
+  data: starwars
+  prompt: "Keep only the name column of starwars and add name_length, the number of characters in each name."
+  hint: "select(), then mutate() with str_length()."
+  solution: |
+    starwars |>
+      select(name) |>
+      mutate(name_length = str_length(name))
+
+- id: st-intl
+  tier: warm-up
+  type: write
+  skill: st-detect
+  data: airports
+  prompt: "Keep the airports whose name contains \"Intl\"."
+  hint: "str_detect() inside filter()."
+  solution: |
+    airports |>
+      filter(str_detect(name, "Intl"))
+
+- id: st-international
+  tier: core
+  type: write
+  skill: st-replace
+  data: airports
+  prompt: "In airports, spell out \"Intl\" as \"International\" in every name."
+  hint: "mutate() the name column with str_replace()."
+  solution: |
+    airports |>
+      mutate(name = str_replace(name, "Intl", "International"))
+
+- id: st-label
+  tier: core
+  type: write
+  skill: st-combine
+  data: starwars
+  prompt: "Keep name and species of starwars and add label, such as \"Luke Skywalker (Human)\", with NA where the species is unknown."
+  hint: "str_c() glues several pieces and gives NA if any piece is NA."
+  solution: |
+    starwars |>
+      select(name, species) |>
+      mutate(label = str_c(name, " (", species, ")"))
+
+- id: st-fix-regional
+  tier: core
+  type: fix
+  skill: st-detect
+  data: airports
+  prompt: "This should keep the airports with \"regional\" in their name, in any capitalisation, but it finds none. Fix it."
+  hint: "The names say \"Regional\". Make the comparison ignore case, e.g. by lower-casing the names first."
+  starter: |
+    airports |>
+      filter(str_detect(name, "regional"))
+  solution: |
+    airports |>
+      filter(str_detect(str_to_lower(name), "regional"))
+
+- id: st-longest
+  tier: stretch
+  type: write
+  skill: st-length
+  data: airports
+  prompt: "The airport(s) with the longest name: the rows of airports whose name has the most characters."
+  hint: "Compare str_length(name) with its own maximum."
+  solution: |
+    airports |>
+      filter(str_length(name) == max(str_length(name)))
+
+- id: st-paste-predict
+  tier: stretch
+  type: predict
+  skill: st-combine
+  prompt: "What does this return?"
+  code: |
+    paste("x", NA)
+  options: ["\"x NA\"", "NA", "\"x\""]
+  verify: 'paste0("\"", result, "\"")'
+  explain: "paste() writes a missing value as the two letters NA, with a space between the pieces. str_c(\"x\", NA) would return NA, which is usually the safer behaviour."
+
+- id: st-vowel-counts
+  tier: brain-melter
+  type: write
+  skill: st-detect
+  data: starwars
+  prompt: >-
+    For each vowel a, e, i, o and u, how many starwars names contain it,
+    in either case? Return a tibble with columns vowel and n.
+  hint: "Start from tibble(vowel = c(\"a\", \"e\", \"i\", \"o\", \"u\")). For each vowel, sum str_detect() over the lower-cased names; map_int() does one vowel at a time."
+  solution: |
+    tibble(vowel = c("a", "e", "i", "o", "u")) |>
+      mutate(n = map_int(vowel, \(v) sum(str_detect(str_to_lower(starwars$name), v))))

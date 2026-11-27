@@ -1,0 +1,16 @@
+data: read_csv(I(raw_messy), show_col_types = FALSE)
+steps:
+  - code: ""
+    show: "read_csv(I(raw_messy))"
+    caption: "A messy file as read: names with spaces and symbols, an empty fourth column (read_csv named it ...4), and an empty second row."
+  - code: "rename_with(make_clean_names, -.id)"
+    show: "clean_names()"
+    renames: {student_name: "Student Name", score_percent: "Score (%)", notes: "Notes", x4: "...4"}
+    caption: "clean_names(): only the headers change. Lower case, words joined by _, % spelled out as percent."
+    skill: im-janitor
+  - code: 'filter(!if_all(-.id, is.na)) |> select(where(\(x) !all(is.na(x))))'
+    show: 'remove_empty(c("rows", "cols"))'
+    caption: "remove_empty() drops the row and the column that hold nothing at all."
+  - code: "mutate(score_percent = score_percent / 100)"
+    caption: "score_percent was read as a number, because nothing in that column broke the guess, so arithmetic just works."
+    skill: im-guess

@@ -1,0 +1,71 @@
+id: 02-counts-props
+title: "Counts and proportions: marginal, joint, conditional"
+key_idea: >-
+  count() turns rows into numbers; n / sum(n) turns counts into proportions.
+  What the proportions add up to depends on what sum(n) adds up. Over the
+  whole table they are joint (or marginal, for one variable) and add up to
+  1. Within a group (.by = species) they are conditional, and add up to 1 in
+  every group. janitor's tabyl() and adorn_*() functions make the same
+  tables for reading, in a fixed order: percentages first, then formatting.
+subskills:
+  - {id: cp-count, name: "count(): sort = and wt ="}
+  - {id: cp-marginal, name: "n / sum(n): shares of the whole"}
+  - {id: cp-conditional, name: "Shares within a group add up to 1 per group"}
+  - {id: cp-tabyl, name: "tabyl() + adorn_percentages() + adorn_pct_formatting()"}
+readings:
+  - {label: "r4ds 3.5.4, count() and proportions", url: "https://r4ds.hadley.nz/data-transform.html#sec-group-by"}
+  - {label: "janitor: tabyls", url: "https://sfirke.github.io/janitor/articles/tabyls.html"}
+  - {label: "STAT 7500 primer ch. 8 (proportions)", url: ""}
+
+predict:
+  skill: cp-marginal
+  code: |
+    penguins |>
+      count(species, sex) |>
+      mutate(prop = n / sum(n))
+  ask: "count() returns 8 rows (3 species × 2 sexes, plus NA sexes). What do the 8 values of prop add up to?"
+  options:
+    - {choice: "1", correct: true}
+    - choice: "3"
+      misconception: count-stays-grouped
+      probe: "count() returns an ungrouped table. Over which rows does sum(n) add up?"
+    - choice: "8"
+      misconception: each-row-is-one
+      probe: "Is each prop a whole (1), or a part of the whole?"
+  verify: 'sum(result$prop)'
+
+probes:
+  - id: p-conditional
+    skill: cp-conditional
+    ask: "With mutate(prop = n / sum(n), .by = species) instead, what do the props of the Adelie rows add up to?"
+    options:
+      - {choice: "1", correct: true}
+      - choice: "0.44, Adelie's share of all penguins"
+        misconception: by-ignored
+        probe: "With .by = species, which rows does sum(n) add up for an Adelie row?"
+      - choice: "3"
+        misconception: groups-add-up
+        probe: "That is the total over all three species. What is the total within one?"
+    right_followup: "Are you sure? Then what question does an Adelie prop answer?"
+    explain: >-
+      With .by = species, sum(n) is the number of Adelie penguins, so each
+      Adelie prop is a conditional proportion: the share of each sex among
+      Adelies. Each species' props add up to 1, so all of them add up to 3.
+    verify: 'isTRUE(all.equal(sum((penguins |> dplyr::count(species, sex) |> dplyr::mutate(prop = n / sum(n), .by = species) |> dplyr::filter(species == "Adelie"))$prop), 1))'
+  - id: p-adorn-order
+    skill: cp-tabyl
+    ask: "penguins |> tabyl(species, island) |> adorn_pct_formatting() |> adorn_percentages(\"row\"): what happens?"
+    options:
+      - {choice: "An error: adorn_percentages() needs numeric columns, and they are now text", correct: true}
+      - choice: "The same table as with the two steps the other way round"
+        misconception: adorn-order-free
+        probe: "What does adorn_pct_formatting() turn the numbers into?"
+      - choice: "Percentages of percentages"
+        misconception: format-is-numeric
+        probe: "After formatting, is \"28.9%\" a number R can divide?"
+    right_followup: "Are you sure? Then which order works, and why?"
+    explain: >-
+      adorn_pct_formatting() turns numbers into text such as "28.9%". After
+      that there is nothing to divide, so adorn_percentages() stops. Compute
+      first (adorn_percentages()), format last (adorn_pct_formatting()).
+    verify: 'inherits(tryCatch(penguins |> janitor::tabyl(species, island) |> janitor::adorn_pct_formatting() |> janitor::adorn_percentages("row"), error = function(e) e), "error")'

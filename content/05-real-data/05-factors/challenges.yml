@@ -1,0 +1,109 @@
+- id: fc-relig-infreq
+  tier: warm-up
+  type: write
+  skill: fc-reorder
+  data: gss_cat
+  prompt: "Count gss_cat's religions, with relig's levels reordered so the most common religion comes first."
+  hint: "fct_infreq() orders levels by frequency; count() then lists them in level order."
+  solution: |
+    gss_cat |>
+      mutate(relig = fct_infreq(relig)) |>
+      count(relig)
+
+- id: fc-race-levels
+  tier: warm-up
+  type: predict
+  skill: fc-levels
+  data: gss_cat
+  prompt: "gss_cat has 21,483 respondents; race appears as Other, Black or White. What does this return?"
+  code: |
+    nlevels(gss_cat$race)
+  options: ["4", "3", "21483"]
+  verify: 'result'
+  explain: "race has a fourth level, \"Not applicable\", that no respondent has. A factor keeps every level it was given, used or not."
+
+- id: fc-party-groups
+  tier: core
+  type: write
+  skill: fc-recode
+  data: gss_cat
+  prompt: >-
+    Collapse partyid into four groups and count them: other (No answer,
+    Don't know, Other party), rep (Strong republican, Not str republican),
+    ind (Ind,near rep, Independent, Ind,near dem) and dem (Not str democrat,
+    Strong democrat).
+  hint: "fct_collapse(partyid, other = c(…), rep = c(…), ind = c(…), dem = c(…)), then count()."
+  solution: |
+    gss_cat |>
+      mutate(partyid = fct_collapse(partyid,
+        other = c("No answer", "Don't know", "Other party"),
+        rep = c("Strong republican", "Not str republican"),
+        ind = c("Ind,near rep", "Independent", "Ind,near dem"),
+        dem = c("Not str democrat", "Strong democrat")
+      )) |>
+      count(partyid)
+
+- id: fc-top-five
+  tier: core
+  type: write
+  skill: fc-lump
+  data: gss_cat
+  prompt: "Keep the 5 most common religions in gss_cat, lump the rest into \"Other\", and count."
+  hint: "fct_lump_n(relig, n = 5) inside mutate(), then count()."
+  solution: |
+    gss_cat |>
+      mutate(relig = fct_lump_n(relig, n = 5)) |>
+      count(relig)
+
+- id: fc-fix-levels
+  tier: core
+  type: fix
+  skill: fc-levels
+  prompt: "This should put penguins' species in the order Gentoo, Chinstrap, Adelie, but every value turns into NA. Fix it."
+  hint: "Levels must match the values exactly, capitals included."
+  starter: |
+    factor(penguins$species, levels = c("gentoo", "chinstrap", "adelie"))
+  solution: |
+    factor(penguins$species, levels = c("Gentoo", "Chinstrap", "Adelie"))
+
+- id: fc-tv-by-relig
+  tier: stretch
+  type: write
+  skill: fc-reorder
+  data: gss_cat
+  prompt: "The mean tvhours for each religion (ignoring NAs), as a tibble with relig's levels ordered by that mean, smallest first."
+  hint: "Summarise per religion, then fct_reorder(relig, tvhours)."
+  solution: |
+    gss_cat |>
+      summarise(tvhours = mean(tvhours, na.rm = TRUE), .by = relig) |>
+      mutate(relig = fct_reorder(relig, tvhours))
+  compare: {ignore_row_order: true}
+
+- id: fc-infreq-predict
+  tier: stretch
+  type: predict
+  skill: fc-reorder
+  prompt: "What are the levels of the result, in order?"
+  code: |
+    fct_infreq(c("b", "a", "b"))
+  options: ["b, a", "a, b", "b, a, b"]
+  verify: 'paste(levels(result), collapse = ", ")'
+  explain: "fct_infreq() orders the levels by how often they occur: b appears twice, a once. Levels are the distinct values, so there are only two."
+
+- id: fc-protestant-denoms
+  tier: brain-melter
+  type: write
+  skill: fc-lump
+  data: gss_cat
+  prompt: >-
+    Among Protestants in gss_cat, keep the 3 most common denominations
+    (denom), lump the rest into "Other", count them, and reorder denom by
+    that count.
+  hint: "filter(), then fct_lump_n(denom, n = 3), then count(), then fct_reorder(denom, n)."
+  solution: |
+    gss_cat |>
+      filter(relig == "Protestant") |>
+      mutate(denom = fct_lump_n(denom, n = 3)) |>
+      count(denom) |>
+      mutate(denom = fct_reorder(denom, n))
+  compare: {ignore_row_order: true}

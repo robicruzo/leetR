@@ -1,0 +1,19 @@
+data: 'tibble(code = c("TRUE", "2L", "3.5", "\"a\"", "NA", "c(1, 2, 3)", "1:10"))'
+steps:
+  - code: ""
+    show: "TRUE   2L   3.5   \"a\"   NA   c(1, 2, 3)   1:10"
+    caption: "Seven small pieces of R code, each making a vector."
+  - code: 'mutate(type = map_chr(code, \(s) typeof(eval(parse(text = s)))))'
+    show: "typeof(…)"
+    tint: type
+    caption: "typeof() for each one, computed by R. 2L and 1:10 are integers, 3.5 and c(1, 2, 3) are doubles. A plain NA is logical."
+    skill: vt-kinds
+  - code: 'mutate(length = map_int(code, \(s) length(eval(parse(text = s)))))'
+    show: "length(…)"
+    tint: type
+    caption: "length() counts the elements. A single value such as 3.5 is just a vector of length 1."
+    skill: vt-length
+  - code: 'arrange(type)'
+    tint: type
+    caption: "Grouped by type: character, double, integer, logical. Every vector has exactly one type."
+    skill: vt-typeof

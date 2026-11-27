@@ -1,0 +1,137 @@
+id: foundations
+number: 1
+title: "R foundations: vectors and lists"
+summary: >-
+  What R values are made of: atomic vectors and their types, how R converts
+  between types, how operations work on whole vectors, what NA does to
+  logic, and how to pick values out with [ ], [[ ]] and $. Everything in
+  the later tracks is built from these.
+needs: []
+modules: [01-vectors, 02-coercion, 03-vectorization, 04-logic-na, 05-subsetting, 06-lists]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-type
+    skill: vt-typeof
+    module: 01-vectors
+    ask: "What does typeof(5L) return?"
+    options:
+      - {choice: "integer", correct: true}
+      - {choice: "double", misconception: suffix-ignored}
+      - {choice: "numeric", misconception: class-is-type}
+    verify: "typeof(5L)"
+  - id: d-coerce
+    skill: co-auto
+    module: 02-coercion
+    ask: "What type is c(TRUE, 2.5)?"
+    options:
+      - {choice: "double", correct: true}
+      - {choice: "logical", misconception: converts-to-simplest}
+      - {choice: "character", misconception: mixed-is-character}
+    verify: "typeof(c(TRUE, 2.5))"
+  - id: d-recycle
+    skill: vz-recycle
+    module: 03-vectorization
+    ask: "How many values does 1:4 * c(1, 10) return?"
+    options:
+      - {choice: "4", correct: true}
+      - {choice: "2", misconception: recycling-truncates}
+      - {choice: "An error", misconception: lengths-must-match}
+    verify: "length(1:4 * c(1, 10))"
+  - id: d-na-and
+    skill: lg-three
+    module: 04-logic-na
+    ask: "What is FALSE & NA?"
+    options:
+      - {choice: "FALSE", correct: true}
+      - {choice: "NA", misconception: na-always-spreads}
+      - {choice: "TRUE", misconception: na-is-true}
+    verify: "FALSE & NA"
+  - id: d-negative
+    skill: sb-index
+    module: 05-subsetting
+    ask: "What does c(\"a\", \"b\", \"c\")[-1] return?"
+    options:
+      - {choice: "\"b\" \"c\"", correct: true}
+      - {choice: "\"c\"", misconception: negative-counts-from-end}
+      - {choice: "\"a\"", misconception: negative-is-select}
+  - id: d-list-bracket
+    skill: ls-bracket
+    module: 06-lists
+    ask: "For a list x, which returns the first element itself (not a list containing it)?"
+    options:
+      - {choice: "x[[1]]", correct: true}
+      - {choice: "x[1]", misconception: single-bracket-extracts}
+      - {choice: "Both", misconception: brackets-same}
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-length-one
+      skill: vt-length
+      ask: "What is length(\"hello world\")?"
+      options:
+        - {choice: "1", correct: true}
+        - {choice: "11", misconception: length-counts-characters}
+        - {choice: "2", misconception: length-counts-words}
+      explain: "\"hello world\" is one string, a character vector of length 1. nchar() counts its 11 characters."
+      verify: 'length("hello world")'
+    - id: fin-mean-logical
+      skill: co-logical-math
+      ask: "What is mean(c(TRUE, FALSE, TRUE, TRUE))?"
+      options:
+        - {choice: "0.75", correct: true}
+        - {choice: "TRUE", misconception: mean-of-logical-is-logical}
+        - {choice: "An error", misconception: logicals-arent-numbers}
+      explain: "TRUE counts as 1 and FALSE as 0, so the mean is 3 / 4: the share of TRUEs."
+      verify: "mean(c(TRUE, FALSE, TRUE, TRUE))"
+    - id: fin-sum-na
+      skill: lg-na
+      ask: "What is sum(c(2, NA, 5))?"
+      options:
+        - {choice: "NA", correct: true}
+        - {choice: "7", misconception: sum-skips-na}
+        - {choice: "0", misconception: na-zeroes}
+      explain: "One unknown value makes the total unknown. sum(x, na.rm = TRUE) gives 7."
+      verify: "sum(c(2, NA, 5))"
+    - id: fin-ifelse
+      skill: vz-ifelse
+      ask: "x <- c(-1, 4). Which line returns c(\"neg\", \"pos\")?"
+      options:
+        - {choice: "ifelse(x > 0, \"pos\", \"neg\")", correct: true}
+        - {choice: "if (x > 0) \"pos\" else \"neg\"", misconception: if-is-vectorised}
+        - {choice: "Both", misconception: if-is-vectorised}
+      explain: "if () needs one TRUE or FALSE, and since R 4.2 a length-2 condition is an error. ifelse() and if_else() decide element by element."
+      verify: 'identical(ifelse(c(-1, 4) > 0, "pos", "neg"), c("neg", "pos"))'
+    - id: fin-dollar
+      skill: sb-df
+      ask: "Which of these returns a data frame rather than a vector?"
+      options:
+        - {choice: "penguins[\"island\"]", correct: true}
+        - {choice: "penguins$island", misconception: dollar-keeps-frame}
+        - {choice: "penguins[[\"island\"]]", misconception: double-bracket-keeps-frame}
+      explain: "One-index [ ] on a data frame keeps the data frame; $ and [[ ]] take the column out as a vector."
+      verify: 'is.data.frame(penguins["island"]) && !is.data.frame(penguins$island)'
+    - id: fin-list-length
+      skill: ls-make
+      ask: "What is length(list(1:10, letters))?"
+      options:
+        - {choice: "2", correct: true}
+        - {choice: "36", misconception: list-flattens}
+        - {choice: "10", misconception: list-length-first}
+      explain: "A list keeps its pieces separate: two elements, however long each one is. c(1:10, letters) would have 36."
+      verify: "length(list(1:10, letters))"
+  integrative:
+    id: fin-veteran-heights
+    data: starwars
+    prompt: >-
+      Using only base R vectors (no dplyr verbs), the mean height of the
+      starwars characters who appear in at least 3 films, ignoring unknown
+      heights. Return one number.
+    hint: >-
+      lengths(starwars$films) counts each character's films. Use the
+      condition to index height, then take the mean with na.rm = TRUE.
+    solution: |
+      mean(starwars$height[lengths(starwars$films) >= 3], na.rm = TRUE)
+    forbid: ["filter", "summarise", "mutate"]

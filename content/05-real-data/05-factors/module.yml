@@ -1,0 +1,69 @@
+id: 05-factors
+title: "Factors with forcats: categories in a chosen order"
+key_idea: >-
+  A factor is a categorical variable with a fixed set of levels, and the
+  levels' order, not the alphabet, decides how it sorts, counts and plots.
+  factor() sorts levels alphabetically unless you give them. forcats changes
+  levels without touching the data: fct_infreq() and fct_reorder() reorder
+  them, fct_recode() and fct_collapse() rename and merge them, and
+  fct_lump_n() keeps the biggest and lumps the rest into "Other".
+subskills:
+  - {id: fc-levels, name: "Levels set the order (alphabetical by default)"}
+  - {id: fc-reorder, name: "fct_infreq() and fct_reorder() reorder levels"}
+  - {id: fc-recode, name: "fct_recode() and fct_collapse() rename and merge"}
+  - {id: fc-lump, name: "fct_lump_n() keeps the biggest, lumps the rest"}
+readings:
+  - {label: "r4ds 16, Factors", url: "https://r4ds.hadley.nz/factors.html"}
+  - {label: "forcats reference", url: "https://forcats.tidyverse.org/reference/index.html"}
+  - {label: "STAT 7500 primer ch. 9 (cleaning)", url: ""}
+
+predict:
+  skill: fc-levels
+  code: |
+    levels(factor(c("low", "high", "medium")))
+  ask: "What does this return?"
+  options:
+    - {choice: "high, low, medium", correct: true}
+    - choice: "low, high, medium"
+      misconception: levels-in-appearance-order
+      probe: "factor() has to pick an order when you don't give one. Order of appearance, or the alphabet?"
+    - choice: "low, medium, high"
+      misconception: levels-know-meaning
+      probe: "Does R know that medium sits between low and high?"
+  verify: 'paste(result, collapse = ", ")'
+
+probes:
+  - id: p-arrange-factor
+    skill: fc-levels
+    ask: "x is a factor with levels c(\"b\", \"a\"). Which value does arrange() put first?"
+    options:
+      - {choice: "\"b\", the first level", correct: true}
+      - choice: "\"a\", alphabetically first"
+        misconception: factors-sort-alphabetically
+        probe: "A factor stores codes: b is 1 and a is 2. Which does arrange() sort by?"
+      - choice: "Whichever value appears first"
+        misconception: arrange-keeps-order
+        probe: "arrange() always sorts. By what, for a factor?"
+    right_followup: "Are you sure? How would you make a come first without changing the data?"
+    explain: >-
+      A factor sorts by its levels, not by the labels' spelling. Here b is
+      level 1, so it comes first. fct_relevel(x, "a") or factor(x, levels =
+      c("a", "b")) moves a to the front.
+    verify: 'as.character(dplyr::arrange(tibble::tibble(x = factor(c("b", "a"), levels = c("b", "a"))), x)$x[1]) == "b"'
+  - id: p-recode-direction
+    skill: fc-recode
+    ask: "f has levels apple and kiwi. What are the levels of fct_recode(f, \"Fruit\" = \"apple\")?"
+    options:
+      - {choice: "Fruit, kiwi", correct: true}
+      - choice: "apple, Fruit"
+        misconception: recode-new-on-right
+        probe: "In fct_recode(), which side of = is the new name?"
+      - choice: "Fruit"
+        misconception: recode-collapses-all
+        probe: "Did you ask to change kiwi?"
+    right_followup: "Are you sure? How would you merge apple and kiwi into one level?"
+    explain: >-
+      fct_recode() takes new = old, like rename(). Only the levels you name
+      change. To merge several old levels into one, give them the same new
+      name, or use fct_collapse(f, Fruit = c("apple", "kiwi")).
+    verify: 'paste(levels(forcats::fct_recode(factor(c("apple", "kiwi")), "Fruit" = "apple")), collapse = ", ") == "Fruit, kiwi"'

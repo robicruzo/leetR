@@ -1,0 +1,81 @@
+- id: co-share-heavy
+  tier: warm-up
+  type: write
+  skill: co-logical-math
+  prompt: "What share of the penguins with a recorded body mass weigh more than 4,500 g? Return one number between 0 and 1."
+  hint: "The mean of a TRUE/FALSE vector is the share of TRUEs. na.rm = TRUE skips the unknowns."
+  solution: |
+    mean(penguins$body_mass_g > 4500, na.rm = TRUE)
+
+- id: co-year-text
+  tier: warm-up
+  type: predict
+  prompt: "year holds integers such as 2007. What type is the result?"
+  skill: co-auto
+  code: |
+    c(penguins$year[1], "missing")
+  options: ["character", "integer", "An error"]
+  verify: 'typeof(result)'
+  explain: "\"missing\" can't be a number, so the integer is converted to the text \"2007\" and the whole vector is character."
+
+- id: co-birth-integer
+  tier: core
+  type: write
+  skill: co-explicit
+  data: starwars
+  prompt: "Return starwars' birth_year as whole numbers (an integer vector), dropping any decimals."
+  hint: "as.integer() drops the decimal part."
+  solution: |
+    as.integer(starwars$birth_year)
+
+- id: co-island-text
+  tier: core
+  type: write
+  skill: co-factor
+  prompt: "Return penguins' island as text: a character vector of the labels, not a factor."
+  hint: "as.character() on a factor gives its labels."
+  solution: |
+    as.character(penguins$island)
+
+- id: co-fix-factor-years
+  tier: core
+  type: fix
+  skill: co-factor
+  prompt: "year arrived as a factor, f. The last line should turn it back into the years (2007, 2008, 2009) as numbers, but it returns 1, 2 and 3. Fix it."
+  hint: "as.numeric() on a factor gives the codes. Go through the labels first."
+  starter: |
+    f <- factor(penguins$year)
+    as.numeric(f)
+  solution: |
+    f <- factor(penguins$year)
+    as.numeric(as.character(f))
+
+- id: co-parse-predict
+  tier: stretch
+  type: predict
+  skill: co-explicit
+  prompt: "What does this return (ignoring the warning)?"
+  code: |
+    as.numeric(c("3.5", "1,000", "n/a"))
+  options: ["3.5, NA, NA", "3.5, 1000, NA", "An error"]
+  verify: 'paste(result, collapse = ", ")'
+  explain: "as.numeric() only reads plain numbers. \"1,000\" has a comma, so it fails just like \"n/a\", and both become NA with a warning. readr::parse_number() would read 1000."
+
+- id: co-count-no-filter
+  tier: stretch
+  type: constrained
+  skill: co-logical-math
+  prompt: "Count the penguins with a bill longer than 45 mm and a known sex, without filter(), nrow() or count()."
+  hint: "Combine the two conditions with &, then sum() the TRUEs. na.rm = TRUE skips unknown bill lengths."
+  solution: |
+    sum(penguins$bill_length_mm > 45 & !is.na(penguins$sex), na.rm = TRUE)
+  forbid: ["filter", "nrow", "count"]
+
+- id: co-missing-share
+  tier: brain-melter
+  type: write
+  skill: co-logical-math
+  prompt: "For each column of penguins, the share of values that are missing, as a named numeric vector."
+  hint: "is.na() on a whole data frame gives a TRUE/FALSE matrix. The mean of each column is the share."
+  solution: |
+    colMeans(is.na(penguins))

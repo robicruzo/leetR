@@ -1,0 +1,73 @@
+id: 03-vectorization
+title: "Vectorisation and recycling: whole vectors at once"
+key_idea: >-
+  Arithmetic and comparisons work element by element: x * 2 doubles every
+  value, with no loop. When two vectors differ in length, R recycles the
+  shorter one, and warns only if the longer length is not a multiple of the
+  shorter. Summaries such as sum() and mean() go the other way, reducing a
+  vector to one value. if () needs a single TRUE or FALSE; if_else() decides
+  element by element.
+subskills:
+  - {id: vz-elementwise, name: "Operations work element by element"}
+  - {id: vz-recycle, name: "The shorter vector is recycled"}
+  - {id: vz-reduce, name: "Summaries reduce a vector to one value"}
+  - {id: vz-ifelse, name: "if () takes one value; if_else() takes a vector"}
+readings:
+  - {label: "Advanced R 3.2, Atomic vectors", url: "https://adv-r.hadley.nz/vectors-chap.html"}
+  - {label: "r4ds 13.4, Arithmetic and recycling rules", url: "https://r4ds.hadley.nz/numbers.html#arithmetic-and-recycling-rules"}
+  - {label: "STAT 7500 primer ch. 2 (data basics)", url: ""}
+
+predict:
+  skill: vz-recycle
+  code: |
+    1:6 + c(10, 20)
+  ask: "Six numbers plus two numbers. What does this return?"
+  options:
+    - {choice: "11, 22, 13, 24, 15, 26", correct: true}
+    - choice: "11, 22, 3, 4, 5, 6"
+      misconception: no-recycling
+      probe: "Would R leave 3, 4, 5 and 6 without anything to add? What could it reuse?"
+    - choice: "An error: the lengths differ"
+      misconception: lengths-must-match
+      probe: "6 is a multiple of 2. Can the pair 10, 20 be repeated to fit exactly?"
+    - choice: "11, 12, 13, 14, 15, 16"
+      misconception: first-only
+      probe: "Where did the 20 go?"
+  verify: 'paste(result, collapse = ", ")'
+
+probes:
+  - id: p-recycle-warning
+    skill: vz-recycle
+    ask: "What does 1:5 + c(10, 20) do?"
+    options:
+      - {choice: "Returns 5 values, with a warning that 5 is not a multiple of 2", correct: true}
+      - choice: "Stops with an error"
+        misconception: lengths-must-match
+        probe: "R can still recycle 10, 20, 10, 20, 10. Does it refuse, or just warn?"
+      - choice: "Returns 4 values"
+        misconception: recycling-truncates
+        probe: "Which vector sets the length of the result: the longer or the shorter?"
+    right_followup: "Are you sure? Then why does x * 2, with a length-1 vector, never warn?"
+    explain: >-
+      The result is as long as the longer vector; the shorter one is reused
+      from the start. When the longer length is not a multiple of the
+      shorter, R still computes it but warns, because that is usually a
+      mistake. A single value fits every length, so x * 2 never warns.
+    verify: 'inherits(tryCatch(1:5 + c(10, 20), warning = function(w) w), "warning")'
+  - id: p-if-vector
+    skill: vz-ifelse
+    ask: "x <- c(5, -2). What does if (x > 0) \"pos\" else \"neg\" return?"
+    options:
+      - {choice: "An error: the condition has length 2", correct: true}
+      - choice: "\"pos\", because only the first value is checked"
+        misconception: if-checks-first
+        probe: "That was R's behaviour before version 4.2. What does today's R do with a condition of length 2?"
+      - choice: "c(\"pos\", \"neg\")"
+        misconception: if-is-vectorised
+        probe: "if () chooses between two pieces of code. Which function chooses value by value?"
+    right_followup: "Are you sure? Write the version that gives c(\"pos\", \"neg\")."
+    explain: >-
+      if () runs one branch or the other, so it needs exactly one TRUE or
+      FALSE; since R 4.2 a longer condition is an error. if_else(x > 0,
+      "pos", "neg") (or base ifelse()) decides element by element.
+    verify: 'inherits(tryCatch(if (c(5, -2) > 0) "pos" else "neg", error = function(e) e), "error")'

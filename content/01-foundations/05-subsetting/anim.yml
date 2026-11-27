@@ -1,0 +1,26 @@
+data: penguins_sample |> select(species, body_mass_g)
+steps:
+  - code: ""
+    show: "x <- penguins_sample[c(\"species\", \"body_mass_g\")]"
+    tint: species
+    caption: "Eight penguins, one of them with an unknown mass."
+  - code: '(\(d) d[c(1, 3), ])()'
+    show: "x[c(1, 3), ]"
+    tint: species
+    caption: "Positive positions pick rows 1 and 3, in that order."
+    skill: sb-index
+  - from_data: true
+    code: '(\(d) d[-1, ])()'
+    show: "x[-1, ]"
+    tint: species
+    caption: "A negative position drops: everything except row 1."
+  - from_data: true
+    code: '(\(d) d[d$body_mass_g > 3600, ])()'
+    show: "x[x$body_mass_g > 3600, ]"
+    tint: species
+    caption: "A logical index keeps the TRUE rows. The penguin with no mass gives NA, so R can't decide, and you get a row of NAs in its place."
+    skill: sb-logical
+  - from_data: true
+    code: 'filter(body_mass_g > 3600)'
+    tint: species
+    caption: "filter() drops rows where the condition is NA. Same question, four rows, and no row of NAs."

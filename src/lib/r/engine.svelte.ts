@@ -68,6 +68,17 @@ export interface SnippetOptions {
 
 class TimeoutError extends Error {}
 
+// Grading captures R's conditions, like Run does, and never throws from R:
+// #fromCapture() reads an R error out of the captured output instead. (With
+// captureConditions: false, webR threw an exception with an empty message on
+// some results, e.g. any graded value containing a Date.)
+const GRADE_CAPTURE = {
+	captureStreams: true,
+	captureConditions: true,
+	captureGraphics: { width: 640, height: 400 },
+	throwJsException: false
+};
+
 // R's default graphics device (pdf) throws inside webR. captureR() restores the
 // previous device afterwards, which opens that default if nothing was open, so
 // keep a throwaway canvas "parked" as the current device at all times, and make
@@ -127,17 +138,42 @@ class REngine {
 			        warn = 1, pillar.advice = FALSE, lifecycle_verbosity = "quiet")
 			suppressPackageStartupMessages({
 				library(dplyr); library(tidyr); library(purrr); library(stringr)
+				# (content/setup.R attaches the rest: forcats, lubridate, readr, janitor, …)
 			})
 			invisible(loadNamespace("waldo"))
 		`);
 		await webR.evalRVoid(setupSource);
 		await webR.evalRVoid(graderSource);
+		await this.#warmUpTimeZones(webR);
 		await webR.evalRVoid(PARK_DEVICE);
 
 		this.#webR = webR;
 		this.status = 'ready';
 		this.detail = '';
 		return webR;
+	}
+
+	/**
+	 * In the browser, webR fetches R's time-zone files lazily, and the first
+	 * one or two date operations of a session (even as.Date("2026-01-02"))
+	 * fail below R's error handling, so not even tryCatch() sees them. Under
+	 * Node the files are on disk and this never happens. Touch dates, date-times
+	 * and a real time zone here, retrying, so learner code is never first.
+	 */
+	async #warmUpTimeZones(webR: WebRType) {
+		this.detail = 'Loading time zones…';
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				await webR.evalRVoid(`invisible(list(
+					as.Date("2026-01-02"),
+					format(as.POSIXct("2026-03-08 12:00:00", tz = "America/New_York"), tz = "UTC"),
+					lubridate::ymd_hms("2026-03-07 12:00:00", tz = "America/New_York") + lubridate::ddays(1)
+				))`);
+				return;
+			} catch {
+				// Expected on the first attempts; the files are loaded by now or soon.
+			}
+		}
 	}
 
 	/** Kill the worker and boot a fresh R session. */
@@ -280,39 +316,18 @@ class REngine {
 				await webR.evalRVoid(PARK_DEVICE);
 				const shelter = await new webR.Shelter();
 				try {
-					const { result } = await shelter.captureR(
+					const captured = await shelter.captureR(
 						'.leetr$grade(.leetr_user, .leetr_solution, .leetr_tests, .leetr_opts)',
-						// captureConditions: false, so an error inside the grader itself
-						// throws and is reported, instead of yielding an empty result.
-						{ captureStreams: true, captureConditions: false, captureGraphics: false }
+						GRADE_CAPTURE
 					);
-					const r = toPlain(await result.toJs()) as Record<string, unknown> | null;
-					if (!r) throw new Error('The grader returned nothing. Try Restart R, then Submit again.');
-					return {
-						passed: Boolean(r.passed),
-						structure: (r.structure as string[]) ?? [],
-						cases: ((r.cases as CaseResult[]) ?? []).map((c) => ({ ...c, hidden: Boolean(c.hidden) })),
-						error: (r.error as string) ?? null,
-						timedOut: false,
-						ms: performance.now() - t0
-					};
+					return await this.#fromCapture(captured, t0);
 				} finally {
 					await shelter.purge();
 					await webR.destroy(optsList);
 				}
 			});
 		} catch (err) {
-			const timedOut = err instanceof TimeoutError;
-			return {
-				passed: false,
-				structure: [],
-				cases: [],
-				error: timedOut
-					? `Grading stopped after ${timeoutMs / 1000}s. Your function may loop forever on some input.`
-					: String((err as Error)?.message ?? err),
-				timedOut,
-				ms: performance.now() - t0
-			};
+			return this.#gradeError(err, timeoutMs, t0);
 		}
 	}
 
@@ -330,12 +345,11 @@ class REngine {
 				await webR.evalRVoid(PARK_DEVICE);
 				const shelter = await new webR.Shelter();
 				try {
-					const { result } = await shelter.captureR('.leetr$grade_snippet(.leetr_user, .leetr_solution, .leetr_opts)', {
-						captureStreams: true,
-						captureConditions: false,
-						captureGraphics: false
-					});
-					return this.#toGrade(toPlain(await result.toJs()) as Record<string, unknown> | null, t0);
+					const captured = await shelter.captureR(
+						'.leetr$grade_snippet(.leetr_user, .leetr_solution, .leetr_opts)',
+						GRADE_CAPTURE
+					);
+					return await this.#fromCapture(captured, t0);
 				} finally {
 					await shelter.purge();
 					await webR.destroy(optsList);
@@ -346,8 +360,49 @@ class REngine {
 		}
 	}
 
-	#toGrade(r: Record<string, unknown> | null, t0: number): GradeResult {
-		if (!r) throw new Error('The grader returned nothing. Try Restart R, then Submit again.');
+	/**
+	 * Read the grader's result. If R stopped instead (an error inside the
+	 * grader itself), report R's own error message rather than an empty verdict.
+	 */
+	async #fromCapture(
+		captured: { result: { toJs: () => Promise<unknown> }; output: { type: string; data: unknown }[] },
+		t0: number
+	): Promise<GradeResult> {
+		let r: unknown = null;
+		try {
+			r = toPlain(await captured.result.toJs());
+		} catch {
+			// The value isn't the grader's list (R stopped): fall through to the errors.
+		}
+		if (r && typeof r === 'object' && !Array.isArray(r) && 'passed' in r) {
+			return this.#toGrade(r as Record<string, unknown>, t0);
+		}
+		for (const o of captured.output) {
+			if (o.type !== 'error') continue;
+			// Ask R for the message: the condition object itself holds an R call,
+			// which webR cannot convert to JavaScript.
+			let message = 'no message';
+			try {
+				const cond = o.data as { _webRObject?: unknown };
+				message = await this.#conditionMessage(cond);
+			} catch {
+				/* keep the fallback */
+			}
+			throw new Error(`The grader stopped with an R error: ${message}. Try Restart R, then Submit again.`);
+		}
+		throw new Error('The grader returned nothing. Try Restart R, then Submit again.');
+	}
+
+	async #conditionMessage(cond: unknown): Promise<string> {
+		const webR = await this.start();
+		const fn = (await webR.evalR('function(c) conditionMessage(c)')) as unknown as {
+			exec: (c: unknown) => Promise<{ toJs: () => Promise<unknown> }>;
+		};
+		const msg = await fn.exec(cond);
+		return String(toPlain(await msg.toJs()) ?? 'no message');
+	}
+
+	#toGrade(r: Record<string, unknown>, t0: number): GradeResult {
 		return {
 			passed: Boolean(r.passed),
 			structure: (r.structure as string[]) ?? [],
@@ -360,13 +415,14 @@ class REngine {
 
 	#gradeError(err: unknown, timeoutMs: number, t0: number): GradeResult {
 		const timedOut = err instanceof TimeoutError;
+		if (!timedOut) console.error('leetR: grading failed', err);
 		return {
 			passed: false,
 			structure: [],
 			cases: [],
 			error: timedOut
 				? `Grading stopped after ${timeoutMs / 1000}s. Does your code loop forever?`
-				: String((err as Error)?.message ?? err),
+				: String((err as Error)?.message || err || 'Grading failed with no message. Try Restart R, then Submit again.'),
 			timedOut,
 			ms: performance.now() - t0
 		};

@@ -1,0 +1,78 @@
+- id: sb-first-ten
+  tier: warm-up
+  type: write
+  skill: sb-index
+  prompt: "The body masses of the first 10 penguins, as a vector."
+  hint: "1:10 is a vector of positions."
+  solution: |
+    penguins$body_mass_g[1:10]
+
+- id: sb-island-vector
+  tier: warm-up
+  type: write
+  skill: sb-df
+  prompt: "The island column of penguins as a plain vector (a factor), not a tibble."
+  hint: "[[ ]] or $ take one column out of a data frame."
+  solution: |
+    penguins$island
+
+- id: sb-chinstrap-bills
+  tier: core
+  type: write
+  skill: sb-logical
+  prompt: "The bill lengths of the Chinstrap penguins, as a numeric vector."
+  hint: "Index one column with a condition on another: x[species == \"Chinstrap\"]."
+  solution: |
+    penguins$bill_length_mm[penguins$species == "Chinstrap"]
+
+- id: sb-double-bracket
+  tier: core
+  type: predict
+  skill: sb-df
+  prompt: "What does this return?"
+  code: |
+    penguins[["bill_length_mm"]][1:3]
+  options: ["39.1, 39.5, 40.3", "A tibble with 3 rows", "The column name"]
+  verify: 'paste(result, collapse = ", ")'
+  explain: "[[\"bill_length_mm\"]] takes the column out as a numeric vector, and [1:3] then picks its first three values."
+
+- id: sb-fix-heavy
+  tier: core
+  type: fix
+  skill: sb-logical
+  prompt: "This should return the body masses over 6,000 g, but the result contains an NA. Fix it."
+  hint: "The unknown mass gives an NA in the index. which() keeps only the positions that are TRUE."
+  starter: |
+    penguins$body_mass_g[penguins$body_mass_g > 6000]
+  solution: |
+    penguins$body_mass_g[which(penguins$body_mass_g > 6000)]
+
+- id: sb-row-by-name
+  tier: stretch
+  type: constrained
+  skill: sb-names
+  prompt: "The species and body mass of the 5th and the 150th penguin, as a two-row tibble, using [ ] with row positions and column names."
+  hint: "df[rows, columns]: a vector of positions for the rows, a character vector of names for the columns."
+  solution: |
+    penguins[c(5, 150), c("species", "body_mass_g")]
+  forbid: ["select", "filter", "slice"]
+
+- id: sb-every-tenth
+  tier: stretch
+  type: write
+  skill: sb-index
+  prompt: "Every 10th penguin's body mass: the 1st, 11th, 21st and so on."
+  hint: "seq(1, length(x), by = 10) makes the positions."
+  solution: |
+    penguins$body_mass_g[seq(1, nrow(penguins), by = 10)]
+
+- id: sb-heaviest-name
+  tier: brain-melter
+  type: constrained
+  skill: sb-logical
+  data: starwars
+  prompt: "The name of the heaviest starwars character (among those with a known mass), using only base subsetting."
+  hint: "which.max() gives the position of the largest value and ignores NAs. Use that position to index name."
+  solution: |
+    starwars$name[which.max(starwars$mass)]
+  forbid: ["filter", "slice_max", "arrange"]
