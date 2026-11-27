@@ -67,6 +67,25 @@ async function fromCache(cached: Response, req: Request): Promise<Response> {
 	return new Response(buf.slice(start, end + 1), { status: 206, statusText: 'Partial Content', headers });
 }
 
+// The R package index is the one file that changes without changing its name.
+// During an update the old service worker still controls the page, so a page
+// that is new in the update (fetched from the network) could get the old,
+// cached index and fail to find a newly added package. Fetch it network-first,
+// and fall back to the cache only when offline.
+const PACKAGE_INDEX = /\/webr-repo\/.*\/PACKAGES(\.gz|\.rds)?$/;
+
+async function networkFirst(req: Request, cache: Cache): Promise<Response> {
+	try {
+		const res = await fetch(req, { cache: 'no-cache' });
+		if (res.ok && req.method === 'GET') cache.put(req, res.clone());
+		return isolate(res);
+	} catch (err) {
+		const cached = await cache.match(req.url, { ignoreVary: true });
+		if (cached) return isolate(await fromCache(cached, req));
+		throw err;
+	}
+}
+
 sw.addEventListener('fetch', (event) => {
 	const req = event.request;
 	if (req.method !== 'GET' && req.method !== 'HEAD') return;
@@ -76,6 +95,7 @@ sw.addEventListener('fetch', (event) => {
 	event.respondWith(
 		(async () => {
 			const cache = await caches.open(CACHE);
+			if (PACKAGE_INDEX.test(url.pathname)) return networkFirst(req, cache);
 			// Cache keys are GET requests; match HEAD/Range requests against them by URL.
 			const key = req.method === 'GET' && !req.headers.has('Range') ? req : req.url;
 			// ignoreVary: hosts often send `Vary: Origin`, and module imports carry an

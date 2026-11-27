@@ -517,6 +517,13 @@ It runs under webR (`.build_args` set by check.mjs) or native R
   check can't catch it. The engine warms up dates, date-times and a time zone
   at boot, retrying (`#warmUpTimeZones`). If date grading ever breaks again,
   test the **first** date operation of a fresh session.
+- **Updates and the service worker:** right after a deploy, the old worker
+  still controls an open or installed app. A page that is new in the update
+  comes from the network (new code), while the R package index came from the
+  old cache, so a newly added package was missing and R failed to start
+  ("no package called forcats", seen live 2026-11-27). The index
+  (`webr-repo/.../PACKAGES*`) is now fetched network-first, with the cache
+  as offline fallback. Other files are content-hashed or versioned by name.
 - A verb that renames every column renames the hidden `.id` too:
   `clean_names()` turned it into `id`. build.R now fails such a step; in an
   animation use `rename_with(make_clean_names, -.id)`.
