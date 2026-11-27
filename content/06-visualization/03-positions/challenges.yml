@@ -1,0 +1,93 @@
+- id: po-class-drv-stack
+  tier: warm-up
+  type: write
+  skill: po-stack
+  data: mpg
+  prompt: "Bars of the number of cars in each class, filled by drive type (drv), stacked."
+  hint: "fill = drv in the mapping; stacking is the default."
+  solution: |
+    ggplot(mpg, aes(class, fill = drv)) +
+      geom_bar()
+
+- id: po-class-drv-dodge
+  tier: warm-up
+  type: write
+  skill: po-dodge
+  data: mpg
+  prompt: "The same counts, with the drive types side by side instead of stacked."
+  hint: "geom_bar() takes a position."
+  solution: |
+    ggplot(mpg, aes(class, fill = drv)) +
+      geom_bar(position = "dodge")
+
+- id: po-class-drv-fill
+  tier: core
+  type: write
+  skill: po-fill
+  data: mpg
+  prompt: "For each class, the proportion of cars with each drive type: every bar the same height."
+  hint: "The position that stretches each bar to 1."
+  solution: |
+    ggplot(mpg, aes(class, fill = drv)) +
+      geom_bar(position = "fill")
+
+- id: po-fix-proportions
+  tier: core
+  type: fix
+  skill: po-fill
+  prompt: "This should show, for each island, the proportion of each species, but it shows counts. Fix it."
+  hint: "Which position turns counts into proportions within each bar?"
+  starter: |
+    ggplot(penguins, aes(island, fill = species)) +
+      geom_bar()
+  solution: |
+    ggplot(penguins, aes(island, fill = species)) +
+      geom_bar(position = "fill")
+
+- id: po-overplotting
+  tier: core
+  type: write
+  skill: po-overlap
+  data: mpg
+  prompt: "City (cty) against highway (hwy) mileage, with points at transparency 0.2 so the overlaps show."
+  hint: "A setting outside aes()."
+  solution: |
+    ggplot(mpg, aes(cty, hwy)) +
+      geom_point(alpha = 0.2)
+
+- id: po-fill-labelled
+  tier: stretch
+  type: write
+  skill: po-fill
+  prompt: "Proportions of each species on each island (filled bars), with the y axis titled \"share\"."
+  hint: "labs(y = …) renames the y axis."
+  solution: |
+    ggplot(penguins, aes(island, fill = species)) +
+      geom_bar(position = "fill") +
+      labs(y = "share")
+  compare: {labels: ["y"]}
+
+- id: po-dodge-bars
+  tier: stretch
+  type: predict
+  skill: po-dodge
+  prompt: "How many bars does this draw? (Biscoe has Adelie and Gentoo, Dream has Adelie and Chinstrap, Torgersen only Adelie.)"
+  code: |
+    ggplot(penguins, aes(island, fill = species)) +
+      geom_bar(position = "dodge")
+  options: ["5", "9", "3"]
+  verify: 'nrow(ggplot2::layer_data(result))'
+  explain: "One bar per island and species combination that exists: 2 + 2 + 1 = 5. Combinations with no penguins get no bar (the others widen to fill the space)."
+
+- id: po-marital-race
+  tier: brain-melter
+  type: write
+  skill: po-fill
+  data: gss_cat
+  prompt: >-
+    gss_cat: for each marital status, the proportion of each race (filled
+    bars), with the marital statuses ordered from most to least common.
+  hint: "fct_infreq(marital) inside aes() orders the bars by frequency."
+  solution: |
+    ggplot(gss_cat, aes(fct_infreq(marital), fill = race)) +
+      geom_bar(position = "fill")

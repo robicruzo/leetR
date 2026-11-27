@@ -199,6 +199,28 @@ table_of <- function(df) {
   list(cols = I(vis), rows = lapply(seq_len(nrow(df)), function(r) I(unname(vapply(vis, function(nm) fmt(df[[nm]][r]), "")))))
 }
 
+# ---------- plots (Track 6) ----------
+geom_names <- function(p) paste0("geom_", tolower(sub("^Geom", "", vapply(p$layers, function(l) class(l$geom)[1], ""))))
+
+# anim.yml for a plotting module lists `plots:` instead of `steps:`: each is
+# complete ggplot code, and the app draws them one by one with R (the layer
+# stack). Here every step must return a ggplot that builds.
+build_plots <- function(a, mod_id) {
+  data_table <- if (!is.null(a$data)) table_of(run_code(a$data, new_env())) else NULL
+  plots <- lapply(seq_along(a$plots), function(i) {
+    s <- a$plots[[i]]
+    where <- paste0(mod_id, " plot step ", i)
+    p <- tryCatch(run_code(s$code, new_env()), error = function(e) { problem(where, ": ", conditionMessage(e)); NULL })
+    if (!is.null(p) && !inherits(p, "ggplot")) problem(where, ": the code does not return a ggplot")
+    if (inherits(p, "ggplot")) {
+      tryCatch(suppressWarnings(suppressMessages(ggplot2::ggplot_build(p))),
+               error = function(e) problem(where, ": the plot does not build: ", conditionMessage(e)))
+    }
+    list(code = s$code, caption = s$caption, skill = s$skill)
+  })
+  list(steps = list(), plots = plots, data_table = data_table)
+}
+
 # ---------- code checks ----------
 tokens_of <- function(code) {
   pd <- getParseData(parse(text = code, keep.source = TRUE))
@@ -228,9 +250,25 @@ check_challenge <- function(ch, mod_id) {
               explain = ch$explain, data = if (!is.null(ch$data)) ch$data else "penguins",
               forbid = AI(unlist(ch$forbid)), require = AI(unlist(ch$require)), compare = ch$compare,
               robust = if (isFALSE(ch$robust)) FALSE else NULL, uses = AI(unlist(ch$uses)))
+  # compare: {labels: […], theme: […]} must be names. YAML 1.1 reads an
+  # unquoted y as TRUE, so [x, y] silently became [x, TRUE]: write "y".
+  for (k in c("labels", "theme")) {
+    v <- ch$compare[[k]]
+    if (!is.null(v) && !all(vapply(v, is.character, logical(1)))) {
+      problem(where, ": compare ", k, " must all be names; quote \"y\" (YAML reads it as TRUE)")
+    }
+  }
   if (is.null(res)) return(out)
-  if (is.data.frame(res)) out$dims <- sprintf("%s rows × %s columns", format(nrow(res), big.mark = ","), ncol(res))
-  out$expected <- printed(res)
+  if (inherits(res, "ggplot")) {
+    # A plot: check it builds, and describe it instead of printing (drawing).
+    tryCatch(suppressWarnings(suppressMessages(ggplot2::ggplot_build(res))),
+             error = function(e) problem(where, ": the plot does not build: ", conditionMessage(e)))
+    out$plot <- TRUE
+    out$expected <- paste0("A plot: ", paste(geom_names(res), collapse = " + "))
+  } else {
+    if (is.data.frame(res)) out$dims <- sprintf("%s rows × %s columns", format(nrow(res), big.mark = ","), ncol(res))
+    out$expected <- printed(res)
+  }
   toks <- tokens_of(code)
   for (f in unlist(ch$forbid)) if (f %in% toks) problem(where, ": solution uses forbidden ", f)
   for (r in unlist(ch$require)) if (!r %in% toks) problem(where, ": solution lacks required ", r)
@@ -296,13 +334,14 @@ mods <- lapply(track$modules, function(m) {
   mod <- read_yaml(file.path(d, "module.yml"))
   anim <- read_yaml(file.path(d, "anim.yml"))
   chs <- read_yaml(file.path(d, "challenges.yml"))
-  built <- build_anim(anim, m)
+  built <- if (!is.null(anim$plots)) build_plots(anim, m) else build_anim(anim, m)
   # verify the predict question on the animation's own pipeline
   env <- new_env(); env$result <- run_code(mod$predict$code, env)
   mod$predict <- verify_mcq(mod$predict, paste0(m, "/predict"), env)
   mod$predict$data_table <- if (isTRUE(mod$predict$show_data)) built$data_table else NULL
   mod$probes <- lapply(mod$probes, function(p) verify_mcq(p, paste0(m, "/", p$id)))
   mod$anim <- built$steps
+  mod$plots <- built$plots
   mod$challenges <- lapply(chs, check_challenge, mod_id = m)
   tiers <- table(vapply(chs, `[[`, "", "tier"))
   if (length(chs) != 8) problem(m, ": has ", length(chs), " challenges, expected 8")
@@ -311,7 +350,7 @@ mods <- lapply(track$modules, function(m) {
   for (u in setdiff(used, sk)) problem(m, ": unknown subskill ", u)
   for (u in setdiff(sk, used)) problem(m, ": subskill ", u, " is never practised")
   counts$modules <<- counts$modules + 1; counts$challenges <<- counts$challenges + length(chs)
-  counts$probes <<- counts$probes + length(mod$probes); counts$anim_steps <<- counts$anim_steps + length(anim$steps)
+  counts$probes <<- counts$probes + length(mod$probes); counts$anim_steps <<- counts$anim_steps + length(anim$steps) + length(anim$plots)
   mod
 })
 counts$lines <- counts$lines + length(readLines(file.path(track_dir, "track.yml")))

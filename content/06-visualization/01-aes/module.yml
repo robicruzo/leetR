@@ -1,0 +1,68 @@
+id: 01-aes
+title: "Aesthetics: mapping data vs setting constants"
+key_idea: >-
+  A ggplot maps columns to visual properties inside aes(): position (x, y),
+  colour, size, shape. Mapped values get a scale and a legend. A fixed
+  property, the same for every point, is set outside aes(), in the layer.
+  Mappings in ggplot() apply to every layer; mappings in one layer apply
+  only there.
+subskills:
+  - {id: ae-map, name: "aes() maps a column to a visual property"}
+  - {id: ae-const, name: "A constant goes outside aes()"}
+  - {id: ae-inherit, name: "ggplot() mappings reach every layer; layer ones don't"}
+readings:
+  - {label: "r4ds 1.2–1.4, Data visualization", url: "https://r4ds.hadley.nz/data-visualize.html"}
+  - {label: "MDSR 3.1, The grammar of graphics", url: "https://mdsr-book.github.io/mdsr3e/03-common-mistakes.html"}
+  - {label: "STAT 7500 primer ch. 4 (ggplot grammar)", url: ""}
+
+predict:
+  skill: ae-const
+  code: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point(aes(colour = "blue"))
+  ask: "What colour are the points?"
+  options:
+    - {choice: "Red-orange, with a legend that says \"blue\"", correct: true}
+    - choice: "Blue"
+      misconception: aes-sets-constant
+      probe: "Inside aes(), \"blue\" is treated as data: a column holding the word blue. What does ggplot do with a data value it maps to colour?"
+    - choice: "An error: blue is not a column"
+      misconception: aes-needs-column
+      probe: "\"blue\" in quotes is a value, not a column name. Can aes() map a single value?"
+  verify: 'identical(unique(ggplot2::layer_data(result)$colour), "#F8766D")'
+
+probes:
+  - id: p-constant
+    skill: ae-const
+    ask: "Which line draws every point dark blue?"
+    options:
+      - {choice: "geom_point(colour = \"darkblue\")", correct: true}
+      - choice: "geom_point(aes(colour = \"darkblue\"))"
+        misconception: aes-sets-constant
+        probe: "Inside aes(), a value is mapped through a colour scale. Which colour does the default scale give the first value?"
+      - choice: "geom_point(aes(colour = darkblue))"
+        misconception: unquoted-constant
+        probe: "Without quotes, darkblue is a column name. Does penguins have a column called darkblue?"
+    right_followup: "Are you sure? Then when do you use aes(colour = …)?"
+    explain: >-
+      Set a fixed look outside aes(), as an argument of the layer. aes() is
+      only for mapping data: a column whose values become colours through a
+      scale, with a legend to decode them.
+  - id: p-inherit
+    skill: ae-inherit
+    ask: "ggplot(penguins, aes(flipper_length_mm, body_mass_g)) + geom_point(aes(colour = species)) + geom_smooth(method = \"lm\"). How many fitted lines?"
+    options:
+      - {choice: "1", correct: true}
+      - choice: "3, one per species"
+        misconception: layer-aes-is-global
+        probe: "colour = species is inside geom_point(). Does geom_smooth() know about it?"
+      - choice: "0"
+        misconception: smooth-needs-colour
+        probe: "geom_smooth() has x and y from ggplot(). What more does it need to fit one line?"
+    right_followup: "Are you sure? Where would colour = species go to get one line per species?"
+    explain: >-
+      Mappings in ggplot() are inherited by every layer; mappings in a layer
+      apply only to it. Here only the points know about species, so
+      geom_smooth() fits one line through all of them. Move colour = species
+      into ggplot() for one line per species.
+    verify: 'length(unique(ggplot2::layer_data(ggplot2::ggplot(penguins, ggplot2::aes(flipper_length_mm, body_mass_g)) + ggplot2::geom_point(ggplot2::aes(colour = species)) + ggplot2::geom_smooth(method = "lm", formula = y ~ x), 2)$group)) == 1'

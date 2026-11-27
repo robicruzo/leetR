@@ -1,0 +1,67 @@
+id: 03-positions
+title: "Positions: stacked, dodged, filled (counts vs proportions)"
+key_idea: >-
+  When bars share an x, the position adjustment decides how they fit
+  together. Stacked (the default) shows totals and their parts; dodged puts
+  the parts side by side to compare counts; filled stretches every bar to 1
+  to compare proportions. Each answers a different question. For points that
+  pile up, transparency (alpha) shows where they overlap.
+subskills:
+  - {id: po-stack, name: "Bars with fill stack by default"}
+  - {id: po-dodge, name: "position = \"dodge\": side by side counts"}
+  - {id: po-fill, name: "position = \"fill\": proportions within each bar"}
+  - {id: po-overlap, name: "Overplotting: transparency shows piles of points"}
+readings:
+  - {label: "r4ds 9.6, Position adjustments", url: "https://r4ds.hadley.nz/layers.html#position-adjustments"}
+  - {label: "MDSR 3.2, Canonical data graphics", url: "https://mdsr-book.github.io/mdsr3e/03-common-mistakes.html"}
+  - {label: "STAT 7500 primer ch. 8 (proportions)", url: ""}
+
+predict:
+  skill: po-fill
+  code: |
+    ggplot(penguins, aes(island, fill = species)) +
+      geom_bar(position = "fill")
+  ask: "Biscoe has 168 penguins and Torgersen 52. How tall is each island's bar?"
+  options:
+    - {choice: "1, every bar", correct: true}
+    - choice: "168 and 52, the island's count"
+      misconception: fill-is-counts
+      probe: "\"fill\" stretches each bar. To what height?"
+    - choice: "100"
+      misconception: fill-is-percent
+      probe: "ggplot draws a proportion, not a percentage. What does a whole bar add up to?"
+  verify: 'max(ggplot2::layer_data(result)$ymax) == 1'
+
+probes:
+  - id: p-dodge
+    skill: po-dodge
+    ask: "Which bar chart lets you compare the number of each species on each island, side by side?"
+    options:
+      - {choice: "geom_bar(position = \"dodge\")", correct: true}
+      - choice: "geom_bar(position = \"fill\")"
+        misconception: fill-is-counts
+        probe: "Filled bars all reach 1. Can you read a count from them?"
+      - choice: "geom_bar(), stacked"
+        misconception: stack-compares-parts
+        probe: "In a stack, only the bottom segment starts at 0. Can you compare the middle segments' heights by eye?"
+    right_followup: "Are you sure? Which position answers \"what share of each island is Gentoo?\""
+    explain: >-
+      Dodged bars all start at 0, side by side, so counts compare directly.
+      Stacked bars show each island's total, but the upper segments float.
+      Filled bars compare proportions within each island and hide the totals.
+  - id: p-fill-question
+    skill: po-fill
+    ask: "What question does ggplot(penguins, aes(island, fill = species)) + geom_bar(position = \"fill\") answer?"
+    options:
+      - {choice: "Within each island, what share is each species?", correct: true}
+      - choice: "How many penguins of each species live on each island?"
+        misconception: fill-is-counts
+        probe: "Can you tell from the plot that Torgersen has far fewer penguins than Biscoe?"
+      - choice: "On which islands does each species live, as a share of that species?"
+        misconception: proportions-wrong-direction
+        probe: "Each bar is one island, stretched to 1. Whose parts are the segments?"
+    right_followup: "Are you sure? How would you show each species' split across islands instead?"
+    explain: >-
+      The bars are islands and the segments split each island into species,
+      so the proportions are conditional on island. To condition on species,
+      swap the roles: aes(species, fill = island).

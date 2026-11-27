@@ -5,6 +5,7 @@
 	import DataTable from '#lib/components/DataTable.svelte';
 	import Mcq from '#lib/components/Mcq.svelte';
 	import SkillMap from '#lib/components/SkillMap.svelte';
+	import PlotStack from '#lib/components/PlotStack.svelte';
 	import TableMorph from '#lib/components/TableMorph.svelte';
 	import TrackNav from '#lib/components/TrackNav.svelte';
 	import { progressFor, type AnswerState } from '#lib/progress.svelte.ts';
@@ -79,10 +80,12 @@
 	}
 
 	// 2 Watch: each step raises its subskill to 1; the last step settles the prediction.
+	// Plotting modules have plot steps (drawn by R) instead of table steps.
+	const watchSteps = $derived<{ skill: string | null }[]>(m.plots?.length ? m.plots : m.anim);
 	function onStep(i: number) {
 		if (!picked) return;
-		progress.raise(m.anim[i].skill, 1);
-		if (i === m.anim.length - 1 && !watched) {
+		progress.raise(watchSteps[i].skill, 1);
+		if (i === watchSteps.length - 1 && !watched) {
 			watched = true;
 			progress.patchAnswer(predictKey, { watched: true });
 			if (progress.countOnce(predictKey)) {
@@ -140,7 +143,11 @@
 	</section>
 
 	{#key replay}
-		<TableMorph steps={m.anim} locked={!picked} onstep={onStep} />
+		{#if m.plots?.length}
+			<PlotStack steps={m.plots} locked={!picked} onstep={onStep} />
+		{:else}
+			<TableMorph steps={m.anim} locked={!picked} onstep={onStep} />
+		{/if}
 	{/key}
 
 	{#if watched}

@@ -64,6 +64,8 @@ export interface SnippetOptions {
 	forbid?: string[];
 	require?: string[];
 	robust?: boolean;
+	labels?: string[]; // plots: label names to compare (title, x, …)
+	theme?: string[]; // plots: theme settings to compare (legend.position, …)
 }
 
 class TimeoutError extends Error {}

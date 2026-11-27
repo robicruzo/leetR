@@ -1,0 +1,103 @@
+- id: sc-penguin-colours
+  tier: warm-up
+  type: write
+  skill: sc-colour
+  prompt: >-
+    Flipper length against body mass, coloured by species, using the colours
+    Adelie = "darkorange", Chinstrap = "purple" and Gentoo = "cyan4".
+  hint: "scale_colour_manual(values = c(name = colour, …))."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+      geom_point() +
+      scale_colour_manual(values = c(Adelie = "darkorange", Chinstrap = "purple", Gentoo = "cyan4"))
+
+- id: sc-flip-classes
+  tier: warm-up
+  type: constrained
+  skill: sc-flip
+  data: mpg
+  prompt: "A horizontal bar chart of the number of cars in each class, using coord_flip()."
+  hint: "A vertical bar chart, plus one coordinate function."
+  solution: |
+    ggplot(mpg, aes(class)) +
+      geom_bar() +
+      coord_flip()
+  require: ["coord_flip"]
+
+- id: sc-log-hwy
+  tier: core
+  type: write
+  skill: sc-transform
+  data: mpg
+  prompt: "displ against hwy, with the y axis on a log10 scale."
+  hint: "A scale function for y with log10 in its name."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      scale_y_log10()
+
+- id: sc-fix-zoom
+  tier: core
+  type: fix
+  skill: sc-limits
+  prompt: "This should zoom in on flipper lengths 190–210 mm without dropping any penguins, but it removes most of them. Fix it."
+  hint: "Zoom with a coordinate system instead of a scale."
+  starter: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      scale_x_continuous(limits = c(190, 210))
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      coord_cartesian(xlim = c(190, 210))
+
+- id: sc-viridis
+  tier: core
+  type: write
+  skill: sc-colour
+  prompt: "Flipper length against bill length, with the colour of each point mapped to body mass on the viridis colour scale."
+  hint: "A continuous colour mapping, and scale_colour_viridis_c()."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, bill_length_mm, colour = body_mass_g)) +
+      geom_point() +
+      scale_colour_viridis_c()
+
+- id: sc-zero-baseline
+  tier: stretch
+  type: write
+  skill: sc-limits
+  data: mpg
+  prompt: "displ against hwy, with the y axis extended down to include 0 (without removing anything)."
+  hint: "expand_limits(y = 0) widens a scale without dropping data."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      expand_limits(y = 0)
+
+- id: sc-zoom-predict
+  tier: stretch
+  type: predict
+  skill: sc-limits
+  prompt: "342 penguins have both measurements. How many points does the layer still hold (including the ones outside the window)?"
+  code: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      coord_cartesian(xlim = c(190, 210))
+  options: ["342", "165", "344"]
+  verify: 'sum(!is.na(ggplot2::layer_data(result)$x) & !is.na(ggplot2::layer_data(result)$y))'
+  explain: "coord_cartesian() only zooms; every point with both values stays in the layer, ready for any stat. Only 165 of them fall inside the window."
+
+- id: sc-sorted-means
+  tier: brain-melter
+  type: write
+  skill: sc-flip
+  prompt: >-
+    Horizontal bars of the mean body mass of each species (ignoring NAs),
+    ordered from lightest to heaviest.
+  hint: "Summarise, then fct_reorder(species, mass) on x, geom_col(), and coord_flip()."
+  solution: |
+    penguins |>
+      summarise(mass = mean(body_mass_g, na.rm = TRUE), .by = species) |>
+      ggplot(aes(fct_reorder(species, mass), mass)) +
+      geom_col() +
+      coord_flip()

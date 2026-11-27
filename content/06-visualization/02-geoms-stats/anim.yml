@@ -1,0 +1,32 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(species)) +
+        geom_bar()
+    caption: "geom_bar() counts the rows of each species (its stat) and then draws the counts. You never gave it a y."
+    skill: gs-stat
+  - code: |
+      penguins |>
+        count(species) |>
+        ggplot(aes(species, n)) +
+        geom_col()
+    caption: "The same bars from a table of counts: geom_col() draws the heights you give it."
+  - code: |
+      ggplot(penguins, aes(body_mass_g)) +
+        geom_histogram(binwidth = 500)
+    caption: "A histogram cuts body mass into 500 g bins and counts each. 9 bars, one hump."
+    skill: gs-hist
+  - code: |
+      ggplot(penguins, aes(body_mass_g)) +
+        geom_histogram(binwidth = 100)
+    caption: "Bins of 100 g: the same data with more detail, and more noise, as the counts zig-zag from bin to bin. The bin width is a choice, so try more than one."
+  - code: |
+      ggplot(penguins, aes(species, body_mass_g)) +
+        geom_boxplot()
+    caption: "geom_boxplot() computes a summary per species: median, quartiles, whiskers, outliers."
+    skill: gs-summary
+  - code: |
+      ggplot(penguins, aes(species, body_mass_g)) +
+        geom_boxplot() +
+        geom_point(alpha = 0.2)
+    caption: "Layers stack in order: the points are drawn on top of the boxes, which shows how many penguins each box summarises."
+    skill: gs-layers

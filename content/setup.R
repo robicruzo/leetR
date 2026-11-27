@@ -14,14 +14,13 @@ suppressPackageStartupMessages({
   library(lubridate)
   library(readr)
   library(janitor)
+  library(ggplot2)  # Track 6; also provides mpg
   # Attached after `datasets`, so `penguins` is palmerpenguins' version
   # (bill_length_mm, ...), not the one base R 4.5+ ships (bill_len, ...).
   library(palmerpenguins)
   library(nycflights13) # flights, airlines, airports, planes, weather (lazy-loaded)
 })
 
-# ggplot2 is heavy to load; only pay for it when a challenge touches `mpg`.
-delayedAssign("mpg", ggplot2::mpg)
 
 # The shared animation sample: 8 real penguins, keyed by their row in
 # `penguins`. Row 4 has NA body mass and NA sex on purpose.

@@ -1,0 +1,134 @@
+id: visualization
+number: 6
+title: "Visualization with ggplot2"
+summary: >-
+  The grammar of graphics, one layer at a time: map data to aesthetics,
+  choose geoms and the stats behind them, compare counts and proportions
+  with position adjustments, control scales and coordinates, split with
+  facets, and finish plots for readers with labels, themes and annotations.
+needs: [wrangling]
+modules: [01-aes, 02-geoms-stats, 03-positions, 04-scales-coords, 05-facets, 06-labels-themes]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-const
+    skill: ae-const
+    module: 01-aes
+    ask: "Which line draws every point red?"
+    options:
+      - {choice: "geom_point(colour = \"red\")", correct: true}
+      - {choice: "geom_point(aes(colour = \"red\"))", misconception: aes-sets-constant}
+      - {choice: "Both", misconception: aes-sets-constant}
+  - id: d-bar-col
+    skill: gs-stat
+    module: 02-geoms-stats
+    ask: "Your data already has a count per category, in a column n. Which geom draws those heights?"
+    options:
+      - {choice: "geom_col()", correct: true}
+      - {choice: "geom_bar()", misconception: bar-takes-y}
+      - {choice: "geom_histogram()", misconception: hist-for-counts}
+  - id: d-fill
+    skill: po-fill
+    module: 03-positions
+    ask: "geom_bar(position = \"fill\") makes every bar…"
+    options:
+      - {choice: "reach 1, showing proportions within the bar", correct: true}
+      - {choice: "a different fill colour", misconception: fill-is-colour}
+      - {choice: "fill the panel width", misconception: fill-is-width}
+  - id: d-zoom
+    skill: sc-limits
+    module: 04-scales-coords
+    ask: "Which zooms in on x between 0 and 10 without removing any data?"
+    options:
+      - {choice: "coord_cartesian(xlim = c(0, 10))", correct: true}
+      - {choice: "xlim(0, 10)", misconception: xlim-is-zoom}
+      - {choice: "scale_x_continuous(limits = c(0, 10))", misconception: limits-zoom}
+  - id: d-wrap
+    skill: fa-wrap
+    module: 05-facets
+    ask: "What does + facet_wrap(~ species) do to a scatter plot of penguins?"
+    options:
+      - {choice: "Draws one panel per species", correct: true}
+      - {choice: "Colours the points by species", misconception: facet-is-colour}
+      - {choice: "Sorts the points by species", misconception: facet-sorts}
+    verify: 'nrow(ggplot2::ggplot_build(ggplot2::ggplot(penguins, ggplot2::aes(flipper_length_mm, body_mass_g)) + ggplot2::geom_point() + ggplot2::facet_wrap(~ species))$layout$layout) == 3'
+  - id: d-legend-title
+    skill: lt-labs
+    module: 06-labels-themes
+    ask: "The legend comes from aes(fill = sex). Which renames it to \"Sex\"?"
+    options:
+      - {choice: "labs(fill = \"Sex\")", correct: true}
+      - {choice: "labs(legend = \"Sex\")", misconception: labs-has-legend}
+      - {choice: "labs(colour = \"Sex\")", misconception: fill-is-colour}
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-inherit
+      skill: ae-inherit
+      ask: "ggplot(df, aes(x, y, colour = g)) + geom_point() + geom_line(): which layers are coloured by g?"
+      options:
+        - {choice: "Both", correct: true}
+        - {choice: "Only the points", misconception: first-layer-only}
+        - {choice: "Neither, until each layer says so", misconception: no-inheritance}
+      explain: "Mappings in ggplot() are inherited by every layer, so the points and the lines are both coloured by g."
+    - id: fin-hist-bins
+      skill: gs-hist
+      ask: "geom_histogram(binwidth = 1000) on body mass (2,700–6,300 g): how many bars?"
+      options:
+        - {choice: "4", correct: true}
+        - {choice: "5", misconception: bins-count-edges}
+        - {choice: "30", misconception: bins-ignore-binwidth}
+      explain: "ggplot centres the bins on round numbers, so 1,000 g bins run 2,500–3,500, 3,500–4,500, 4,500–5,500 and 5,500–6,500: 4 bins cover 2,700–6,300 g."
+      verify: "nrow(suppressWarnings(ggplot2::layer_data(ggplot2::ggplot(penguins, ggplot2::aes(body_mass_g)) + ggplot2::geom_histogram(binwidth = 1000))))"
+    - id: fin-dodge-question
+      skill: po-dodge
+      ask: "To compare the number of Adelie penguins across islands, which bar position is best?"
+      options:
+        - {choice: "dodge", correct: true}
+        - {choice: "fill", misconception: fill-is-counts}
+        - {choice: "stack", misconception: stack-compares-parts}
+      explain: "Dodged bars all start at 0, so the Adelie counts can be compared directly. Filled bars show shares, and stacked ones float."
+    - id: fin-limits-fit
+      skill: sc-limits
+      ask: "A geom_smooth() line changes after you add scale_x_continuous(limits = c(190, 210)). Why?"
+      options:
+        - {choice: "The penguins outside the limits were removed before the fit", correct: true}
+        - {choice: "The axis was zoomed, so the line looks different", misconception: limits-zoom}
+        - {choice: "geom_smooth() picks a new method for short ranges", misconception: smooth-adapts}
+      explain: "Scale limits turn data outside them into NA before any stat runs, so the fit uses fewer penguins. coord_cartesian() would zoom without refitting."
+    - id: fin-free
+      skill: fa-scales
+      ask: "Which facet_wrap() call lets each panel have its own y axis but keeps x shared?"
+      options:
+        - {choice: "facet_wrap(~ g, scales = \"free_y\")", correct: true}
+        - {choice: "facet_wrap(~ g, scales = \"free\")", misconception: free-is-y}
+        - {choice: "facet_wrap(~ g, scales = \"free_x\")", misconception: free-axis-swapped}
+      explain: "\"free_y\" frees only y; \"free\" frees both; \"free_x\" frees x."
+    - id: fin-annotate
+      skill: lt-annotate
+      ask: "Why might annotate(\"text\", …) produce many overlapping labels where geom_text(aes(label = …)) would not, or the other way round?"
+      options:
+        - {choice: "geom_text() draws one label per row of data; annotate() draws exactly what you give it", correct: true}
+        - {choice: "annotate() repeats its label once per row of data", misconception: annotate-per-row}
+        - {choice: "They are the same; only the name differs", misconception: annotate-is-geom-text}
+      explain: "geom_text() maps a column, so it writes one label per row. annotate() is a one-off layer with its own values, independent of the data."
+  integrative:
+    id: fin-penguin-report
+    prompt: >-
+      A plot for a report: boxplots of body mass by species (x), filled by
+      sex (penguins of unknown sex removed), one panel per island, titled
+      "Body mass by species and sex", with the y axis titled "Body mass (g)"
+      and the fill legend titled "Sex".
+    hint: >-
+      Filter, then ggplot() with x, y and fill, geom_boxplot(),
+      facet_wrap(~ island), and labs() with title, y and fill.
+    solution: |
+      penguins |>
+        filter(!is.na(sex)) |>
+        ggplot(aes(species, body_mass_g, fill = sex)) +
+        geom_boxplot() +
+        facet_wrap(~ island) +
+        labs(title = "Body mass by species and sex", y = "Body mass (g)", fill = "Sex")
+    compare: {labels: [title, "y", fill]}

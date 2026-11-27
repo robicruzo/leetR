@@ -1,0 +1,31 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        geom_smooth(method = "lm", formula = y ~ x)
+    caption: "All the penguins, with a linear fit through them."
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        geom_smooth(method = "lm", formula = y ~ x) +
+        scale_x_continuous(limits = c(190, 210))
+    caption: "Scale limits remove every penguin outside 190–210 mm before the fit is computed, so the line changes. ggplot warns about the removed rows."
+    skill: sc-limits
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        geom_smooth(method = "lm", formula = y ~ x) +
+        coord_cartesian(xlim = c(190, 210))
+    caption: "coord_cartesian() zooms instead: the same window, but the line is the full-data fit from step 1."
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point() +
+        scale_colour_manual(values = c(Adelie = "darkorange", Chinstrap = "purple", Gentoo = "cyan4"))
+    caption: "scale_colour_manual() picks the colours: these are the palmerpenguins package's own species colours."
+    skill: sc-colour
+  - code: |
+      ggplot(mpg, aes(class)) +
+        geom_bar() +
+        coord_flip()
+    caption: "coord_flip() turns the bars sideways, so long category names stay readable."
+    skill: sc-flip

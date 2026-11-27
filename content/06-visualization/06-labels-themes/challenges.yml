@@ -1,0 +1,115 @@
+- id: lt-axis-titles
+  tier: warm-up
+  type: write
+  skill: lt-labs
+  prompt: "Flipper length against body mass, with the axis titles \"Flipper length (mm)\" and \"Body mass (g)\"."
+  hint: "labs(x = …, y = …)."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      labs(x = "Flipper length (mm)", y = "Body mass (g)")
+  compare: {labels: [x, "y"]}
+
+- id: lt-title-legend
+  tier: warm-up
+  type: write
+  skill: lt-labs
+  prompt: "Flipper length against body mass coloured by species, titled \"Palmer penguins\", with the legend titled \"Species\"."
+  hint: "The legend title is named after its aesthetic in labs()."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+      geom_point() +
+      labs(title = "Palmer penguins", colour = "Species")
+  compare: {labels: [title, colour]}
+
+- id: lt-legend-bottom
+  tier: core
+  type: write
+  skill: lt-theme
+  data: mpg
+  prompt: "displ against hwy coloured by drv, with the legend at the bottom."
+  hint: "theme(legend.position = …)."
+  solution: |
+    ggplot(mpg, aes(displ, hwy, colour = drv)) +
+      geom_point() +
+      theme(legend.position = "bottom")
+  compare: {theme: [legend.position]}
+
+- id: lt-ordered-bars
+  tier: core
+  type: write
+  skill: lt-order
+  data: mpg
+  prompt: "Bars of the number of cars in each class, from the most common class to the least."
+  hint: "fct_infreq(class) inside aes() orders the categories by count."
+  solution: |
+    ggplot(mpg, aes(fct_infreq(class))) +
+      geom_bar()
+
+- id: lt-fix-theme-order
+  tier: core
+  type: fix
+  skill: lt-theme
+  data: mpg
+  prompt: "This should use the minimal theme with the legend at the bottom, but the legend stays on the right. Fix it."
+  hint: "A complete theme resets every tweak made before it."
+  starter: |
+    ggplot(mpg, aes(displ, hwy, colour = drv)) +
+      geom_point() +
+      theme(legend.position = "bottom") +
+      theme_minimal()
+  solution: |
+    ggplot(mpg, aes(displ, hwy, colour = drv)) +
+      geom_point() +
+      theme_minimal() +
+      theme(legend.position = "bottom")
+  compare: {theme: [legend.position]}
+
+- id: lt-highlight-band
+  tier: stretch
+  type: write
+  skill: lt-annotate
+  prompt: >-
+    Flipper length against body mass, with a translucent rectangle behind
+    the points marking flipper lengths from 210 to 230 mm across the whole
+    height: annotate("rect", xmin = 210, xmax = 230, ymin = -Inf, ymax = Inf,
+    alpha = 0.2), drawn before the points.
+  hint: "The layer added first is drawn underneath."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      annotate("rect", xmin = 210, xmax = 230, ymin = -Inf, ymax = Inf, alpha = 0.2) +
+      geom_point()
+
+- id: lt-theme-predict
+  tier: stretch
+  type: predict
+  skill: lt-theme
+  prompt: "Where is the legend?"
+  code: |
+    ggplot(mpg, aes(displ, hwy, colour = drv)) +
+      geom_point() +
+      theme_minimal() +
+      theme(legend.position = "bottom")
+  options: ["bottom", "right", "none"]
+  verify: 'result$theme$legend.position'
+  explain: "The complete theme comes first and the tweak after it, so the tweak survives: the legend is at the bottom."
+
+- id: lt-report-plot
+  tier: brain-melter
+  type: write
+  skill: lt-order
+  data: mpg
+  prompt: >-
+    A plot for a report: horizontal bars of the mean highway mileage of each
+    class, ordered from lowest to highest, titled "Highway mileage by class",
+    with the x axis (before flipping) titled "Class" and the y axis titled
+    "Mean highway mpg".
+  hint: "Summarise, reorder class by the mean with fct_reorder(), geom_col(), coord_flip(), and labs()."
+  solution: |
+    mpg |>
+      summarise(hwy = mean(hwy), .by = class) |>
+      ggplot(aes(fct_reorder(class, hwy), hwy)) +
+      geom_col() +
+      coord_flip() +
+      labs(title = "Highway mileage by class", x = "Class", y = "Mean highway mpg")
+  compare: {labels: [title, x, "y"]}

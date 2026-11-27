@@ -1,0 +1,69 @@
+id: 02-geoms-stats
+title: "Geoms and stats: what gets computed before it's drawn"
+key_idea: >-
+  Every layer has a geom (how to draw) and a stat (what to compute first).
+  geom_bar() counts rows for you (stat = "count"); geom_col() draws heights
+  you already have. geom_histogram() cuts a continuous variable into bins,
+  and the bin width changes the story. geom_boxplot() computes a
+  five-number summary. Layers stack in the order you add them.
+subskills:
+  - {id: gs-stat, name: "geom_bar() counts rows; geom_col() draws your values"}
+  - {id: gs-hist, name: "Histograms bin a continuous variable"}
+  - {id: gs-summary, name: "Boxplots summarise a distribution"}
+  - {id: gs-layers, name: "Layers stack in the order they're added"}
+readings:
+  - {label: "r4ds 1.4–1.5, Visualizing distributions and relationships", url: "https://r4ds.hadley.nz/data-visualize.html#visualizing-distributions"}
+  - {label: "r4ds 9.5, Statistical transformations", url: "https://r4ds.hadley.nz/layers.html#statistical-transformations"}
+  - {label: "STAT 7500 primer ch. 5 (visualization types)", url: ""}
+
+predict:
+  skill: gs-stat
+  code: |
+    ggplot(penguins, aes(species)) +
+      geom_bar()
+  ask: "There is no y in the mapping. How tall is the Adelie bar?"
+  options:
+    - {choice: "152", correct: true}
+    - choice: "1"
+      misconception: bar-draws-rows
+      probe: "geom_bar() has a stat that runs before drawing. What does stat = \"count\" compute?"
+    - choice: "Nothing is drawn without a y"
+      misconception: bar-needs-y
+      probe: "Where could ggplot get a height from, if not from you?"
+  verify: 'ggplot2::layer_data(result)$count[1]'
+
+probes:
+  - id: p-bar-col
+    skill: gs-stat
+    ask: "You have a table of counts: species and n, one row per species. Which layer draws one bar per species with height n?"
+    options:
+      - {choice: "geom_col() with aes(species, n)", correct: true}
+      - choice: "geom_bar() with aes(species, n)"
+        misconception: bar-takes-y
+        probe: "geom_bar() counts rows itself. What would it make of a y you already computed?"
+      - choice: "geom_bar() with aes(species)"
+        misconception: count-the-counts
+        probe: "Your table has one row per species. What would counting its rows give?"
+    right_followup: "Are you sure? What does geom_bar(aes(species, n)) actually do?"
+    explain: >-
+      geom_bar() runs stat = "count" and errors if you give it a y.
+      geom_col() uses stat = "identity": the heights are the values you
+      pass. Counting a table that has one row per species would give bars of
+      height 1.
+  - id: p-binwidth
+    skill: gs-hist
+    ask: "Body mass runs from 2,700 to 6,300 g. How many bars does geom_histogram(binwidth = 500) draw?"
+    options:
+      - {choice: "9", correct: true}
+      - choice: "30"
+        misconception: bins-ignore-binwidth
+        probe: "30 is the default number of bins. What does binwidth replace?"
+      - choice: "7"
+        misconception: range-over-width
+        probe: "3,600 g / 500 g is 7.2. Can a histogram draw part of a bar, and where do the edges fall?"
+    right_followup: "Are you sure? What would binwidth = 100 show that 500 hides?"
+    explain: >-
+      binwidth sets the width of each bin, and the bins are aligned so they
+      cover the whole range: here 9 bins of 500 g. A different width can
+      show or hide features such as two peaks, so try several.
+    verify: 'nrow(suppressWarnings(ggplot2::layer_data(ggplot2::ggplot(penguins, ggplot2::aes(body_mass_g)) + ggplot2::geom_histogram(binwidth = 500))))'

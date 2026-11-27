@@ -1,0 +1,28 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point()
+    caption: "One panel with all the penguins."
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        facet_wrap(~ species)
+    caption: "facet_wrap(~ species): one panel per species, drawn the same way, sharing the axes so positions compare across panels."
+    skill: fa-wrap
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point()
+    caption: "Colour splits the same groups but overlays them in one panel: easier to compare positions, harder to see each group alone."
+    skill: fa-vs-colour
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        facet_grid(sex ~ species)
+    caption: "facet_grid(sex ~ species) crosses two variables: sex in rows, species in columns (including a row for unknown sex)."
+    skill: fa-grid
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+        geom_point() +
+        facet_wrap(~ species, scales = "free")
+    caption: "scales = \"free\" fits each panel to its own data. The clouds fill their panels, but the axes no longer match."
+    skill: fa-scales

@@ -1,0 +1,28 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g))
+    caption: "ggplot() with aes(x, y) sets up the axes and their scales, but no layer draws anything yet."
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+        geom_point()
+    caption: "+ geom_point() adds a layer: one point per penguin, placed by the mapping."
+    skill: ae-map
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g, colour = species)) +
+        geom_point()
+    caption: "Map colour to species: each species gets a colour from the colour scale, and a legend decodes it."
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+        geom_point(aes(colour = "blue"))
+    caption: "The classic slip: \"blue\" inside aes() is treated as data, one value, so the scale's first colour is used and the legend says blue."
+    skill: ae-const
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+        geom_point(colour = "blue")
+    caption: "Outside aes(), colour is a setting: every point is blue, and there is nothing to put in a legend."
+  - code: |
+      ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g, colour = species)) +
+        geom_point() +
+        geom_smooth(method = "lm", formula = y ~ x)
+    caption: "colour = species lives in ggplot(), so every layer inherits it: geom_smooth() fits one line per species."
+    skill: ae-inherit

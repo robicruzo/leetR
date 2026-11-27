@@ -30,7 +30,8 @@ opts_of <- function(ch) list(
   ignore_row_order = isTRUE(ch$compare$ignore_row_order),
   ignore_column_order = isTRUE(ch$compare$ignore_column_order),
   forbid = unlist(ch$forbid), require = unlist(ch$require),
-  robust = !isFALSE(ch$robust)
+  robust = !isFALSE(ch$robust),
+  labels = unlist(ch$compare$labels), theme = unlist(ch$compare$theme)
 )
 `%||%` <- function(x, y) if (is.null(x)) y else x
 grade <- function(code, ch) tryCatch(
@@ -59,6 +60,7 @@ for (ch in gradable) {
     value <- tryCatch(suppressMessages(.leetr$eval_snippet(ch$solution)), error = function(e) NULL)
     # Nobody types in thousands of rows by hand, and deparsing them is slow.
     if (is.data.frame(value) && nrow(value) > 2000) value <- NULL
+    if (inherits(value, "ggplot")) value <- NULL # a plot can't be typed in
     if (!is.null(value)) {
       literal <- paste(deparse(value, control = c("keepNA", "keepInteger", "niceNames", "showAttributes")), collapse = "\n")
       r <- grade(literal, ch); checks <- checks + 1L

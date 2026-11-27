@@ -403,8 +403,112 @@ local(envir = .leetr, {
     df[sort(sample.int(nrow(df), floor(nrow(df) / 2))), , drop = FALSE]
   }
 
+  # ---------------------------------------------------------------------------
+  # Plots (Track 6). Two plots match when ggplot computes the same thing for
+  # them: the same geoms in the same order, the same layer data after stats
+  # and positions (only the columns that are drawn), the same facet panels and
+  # the same axis ranges. Pixels are never compared, so different code that
+  # draws the same plot passes. Labels and theme settings are compared only
+  # when a challenge names them (compare: {labels: [title], theme: [...]}).
+  # ---------------------------------------------------------------------------
+
+  drawn_columns <- c("x", "y", "xmin", "xmax", "ymin", "ymax", "xend", "yend",
+                     "colour", "fill", "alpha", "size", "shape", "linetype",
+                     "linewidth", "label", "PANEL")
+
+  # geom_col() and geom_bar(stat = "identity") draw the same bars.
+  geom_name <- function(layer) {
+    g <- class(layer$geom)[1]
+    if (identical(g, "GeomCol")) "GeomBar" else g
+  }
+  geom_label <- function(g) paste0("geom_", tolower(sub("^Geom", "", g)))
+
+  plot_parts <- function(p) {
+    b <- suppressWarnings(suppressMessages(ggplot2::ggplot_build(p)))
+    layout <- b$layout$layout
+    list(
+      geoms = unname(vapply(p$layers, geom_name, "")), # ggplot2 4.0 names its layers
+      data = lapply(b$data, function(d) tibble::as_tibble(d[intersect(drawn_columns, names(d))])),
+      panels = tibble::as_tibble(layout[setdiff(names(layout), c("SCALE_X", "SCALE_Y", "COORD"))]),
+      ranges = lapply(b$layout$panel_params, function(pp) c(x = pp$x.range, y = pp$y.range)),
+      labels = suppressWarnings(ggplot2::get_labs(p)),
+      theme = p$theme
+    )
+  }
+
+  fmt_range <- function(r) sprintf("x %s to %s, y %s to %s",
+                                   format(signif(r[1], 4)), format(signif(r[2], 4)),
+                                   format(signif(r[3], 4)), format(signif(r[4], 4)))
+
+  compare_plots <- function(got, want, opts) {
+    if (!inherits(got, "ggplot")) {
+      return("Your code's last value is not a plot. End with the ggplot() code itself, not an assignment.")
+    }
+    g <- tryCatch(plot_parts(got), error = function(e) e)
+    if (inherits(g, "error")) return(paste("Your plot could not be built:", conditionMessage(g)))
+    w <- plot_parts(want)
+
+    if (!identical(g$geoms, w$geoms)) {
+      return(sprintf("Your plot's layers are %s; the expected layers are %s.",
+                     if (length(g$geoms)) paste(geom_label(g$geoms), collapse = " + ") else "none",
+                     paste(geom_label(w$geoms), collapse = " + ")))
+    }
+    if (nrow(g$panels) != nrow(w$panels) || !setequal(names(g$panels), names(w$panels))) {
+      return(sprintf("Your plot has %d panel(s)%s; the expected plot has %d%s.",
+                     nrow(g$panels), facet_note(g$panels), nrow(w$panels), facet_note(w$panels)))
+    }
+    out <- character()
+    tol <- opts$tolerance %||% sqrt(.Machine$double.eps)
+    for (i in seq_along(w$data)) {
+      wd <- w$data[[i]]; gd <- g$data[[i]]
+      lacking <- setdiff(names(wd), names(gd))
+      extra <- setdiff(names(gd), names(wd))
+      if (length(lacking) || length(extra)) {
+        out <- c(out, sprintf("Layer %d (%s) draws %s; the expected layer draws %s.", i, geom_label(w$geoms[i]),
+                              paste(setdiff(names(gd), "PANEL"), collapse = ", "),
+                              paste(setdiff(names(wd), "PANEL"), collapse = ", ")))
+        next
+      }
+      # Scale limits turn points outside them into NA (and drop them), which
+      # is a classic surprise: say so plainly before showing the values.
+      dropped <- vapply(intersect(c("x", "y"), names(wd)), function(a) sum(is.na(gd[[a]])) - sum(is.na(wd[[a]])), 0)
+      if (any(dropped > 0)) {
+        a <- names(dropped)[which.max(dropped)]
+        out <- c(out, sprintf("Layer %d (%s): %d more of your points have no %s value, so they are not drawn. Limits on a scale remove the data outside them; coord_cartesian() zooms in without removing anything.",
+                              i, geom_label(w$geoms[i]), max(dropped), a))
+        next
+      }
+      d <- compare_values(gd[names(wd)], wd, list(row_order = "ignore", tolerance = tol))
+      if (nzchar(d)) out <- c(out, sprintf("Layer %d (%s) computes different values:\n\n%s", i, geom_label(w$geoms[i]), d))
+    }
+    if (!length(out) && !isTRUE(all.equal(g$ranges, w$ranges, tolerance = 1e-6))) {
+      out <- c(out, sprintf("The same points, but different axis ranges: yours %s; expected %s. Check limits, zooming and scales.",
+                            fmt_range(g$ranges[[1]]), fmt_range(w$ranges[[1]])))
+    }
+    for (nm in unlist(opts$labels)) {
+      gl <- g$labels[[nm]]; wl <- w$labels[[nm]]
+      if (!identical(as.character(gl), as.character(wl))) {
+        out <- c(out, sprintf("The %s label is %s; expected %s.", nm,
+                              if (is.null(gl)) "missing" else sprintf("\"%s\"", gl), sprintf("\"%s\"", wl)))
+      }
+    }
+    for (nm in unlist(opts$theme)) {
+      gt <- g$theme[[nm]]; wt <- w$theme[[nm]]
+      if (!identical(gt, wt)) {
+        out <- c(out, sprintf("theme(%s = …) is %s; expected %s.", nm,
+                              if (is.null(gt)) "not set" else paste(deparse(gt), collapse = ""), paste(deparse(wt), collapse = "")))
+      }
+    }
+    paste(out, collapse = "\n\n")
+  }
+
+  facet_note <- function(panels) {
+    vars <- setdiff(names(panels), c("PANEL", "ROW", "COL"))
+    if (length(vars)) sprintf(" (faceted by %s)", paste(vars, collapse = ", ")) else ""
+  }
+
   # opts: data ("penguins"), ignore_row_order, ignore_column_order, forbid,
-  # require, robust.
+  # require, robust; for plots also labels and theme (names to compare).
   # Returns the same shape as grade(), so the app shows both kinds alike.
   grade_snippet <- function(user_code, solution_code, opts = list()) {
     result <- list(passed = FALSE, structure = list(), cases = list(), error = NULL)
@@ -431,7 +535,11 @@ local(envir = .leetr, {
         return(list(name = name, hidden = FALSE, status = "error",
                     detail = conditionMessage(got$error), input = ""))
       }
-      detail <- compare_values(normalize(got$value), normalize(want$value), cmp_opts)
+      detail <- if (inherits(want$value, "ggplot")) {
+        compare_plots(got$value, want$value, opts)
+      } else {
+        compare_values(normalize(got$value), normalize(want$value), cmp_opts)
+      }
       list(name = name, hidden = FALSE, status = if (nzchar(detail)) "fail" else "pass",
            detail = detail, input = "")
     }

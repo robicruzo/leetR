@@ -1,0 +1,96 @@
+- id: gs-class-bars
+  tier: warm-up
+  type: write
+  skill: gs-stat
+  data: mpg
+  prompt: "A bar chart of how many cars of each class mpg has."
+  hint: "geom_bar() counts for you: map only x."
+  solution: |
+    ggplot(mpg, aes(class)) +
+      geom_bar()
+
+- id: gs-hwy-hist
+  tier: warm-up
+  type: write
+  skill: gs-hist
+  data: mpg
+  prompt: "A histogram of highway mileage (hwy) with bins 2 miles per gallon wide."
+  hint: "geom_histogram() takes binwidth."
+  solution: |
+    ggplot(mpg, aes(hwy)) +
+      geom_histogram(binwidth = 2)
+
+- id: gs-mean-hwy-col
+  tier: core
+  type: write
+  skill: gs-stat
+  data: mpg
+  prompt: "Bars of the mean highway mileage for each class of car."
+  hint: "Summarise first, then draw the values you computed with geom_col()."
+  solution: |
+    mpg |>
+      summarise(hwy = mean(hwy), .by = class) |>
+      ggplot(aes(class, hwy)) +
+      geom_col()
+
+- id: gs-fix-bar-y
+  tier: core
+  type: fix
+  skill: gs-stat
+  prompt: "This should draw one bar per island with height n, but it stops with an error. Fix it."
+  hint: "Read the error: geom_bar() wants to count. Which geom draws heights you already have?"
+  starter: |
+    penguins |>
+      count(island) |>
+      ggplot(aes(island, n)) +
+      geom_bar()
+  solution: |
+    penguins |>
+      count(island) |>
+      ggplot(aes(island, n)) +
+      geom_col()
+
+- id: gs-mass-boxes
+  tier: core
+  type: write
+  skill: gs-summary
+  prompt: "Boxplots of body mass for each species."
+  hint: "species on x, body_mass_g on y."
+  solution: |
+    ggplot(penguins, aes(species, body_mass_g)) +
+      geom_boxplot()
+
+- id: gs-boxes-and-points
+  tier: stretch
+  type: write
+  skill: gs-layers
+  data: mpg
+  prompt: "Boxplots of hwy for each class of car, with the individual cars drawn on top as points at transparency 0.3."
+  hint: "Two layers; the one added last is drawn on top."
+  solution: |
+    ggplot(mpg, aes(class, hwy)) +
+      geom_boxplot() +
+      geom_point(alpha = 0.3)
+
+- id: gs-default-bins
+  tier: stretch
+  type: predict
+  skill: gs-hist
+  prompt: "How many bars does this histogram draw?"
+  code: |
+    ggplot(penguins, aes(body_mass_g)) +
+      geom_histogram()
+  options: ["30", "9", "344"]
+  verify: 'nrow(suppressMessages(ggplot2::layer_data(result)))'
+  explain: "Without binwidth or bins, geom_histogram() uses 30 bins and prints a message suggesting you choose a better width."
+
+- id: gs-after-stat
+  tier: brain-melter
+  type: constrained
+  skill: gs-stat
+  prompt: "A bar per island whose height is the island's share of all penguins (0 to 1), computed by geom_bar()'s own stat."
+  hint: "after_stat(count) is the count the stat computed; divide it by sum(count) inside aes(y = …)."
+  solution: |
+    ggplot(penguins, aes(island, y = after_stat(count / sum(count)))) +
+      geom_bar()
+  require: ["after_stat"]

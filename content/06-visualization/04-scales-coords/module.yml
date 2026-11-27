@@ -1,0 +1,70 @@
+id: 04-scales-coords
+title: "Scales and coordinates: how values become positions and colours"
+key_idea: >-
+  A scale turns data values into something visible: positions on an axis,
+  colours, sizes. You can transform a scale (scale_y_log10()), pick colours
+  yourself (scale_colour_manual()), or limit it. But scale limits remove the
+  data outside them before any stat runs, while coord_cartesian() only
+  zooms the view. Coordinates also decide orientation: coord_flip() turns
+  bars sideways.
+subskills:
+  - {id: sc-transform, name: "Transformed scales: scale_y_log10()"}
+  - {id: sc-colour, name: "Colour scales: manual and continuous"}
+  - {id: sc-limits, name: "Scale limits remove data; coord_cartesian() zooms"}
+  - {id: sc-flip, name: "coord_flip() for horizontal bars"}
+readings:
+  - {label: "r4ds 11.4, Scales", url: "https://r4ds.hadley.nz/communication.html#scales"}
+  - {label: "r4ds 11.4.4, Zooming", url: "https://r4ds.hadley.nz/communication.html#zooming"}
+  - {label: "STAT 7500 primer ch. 4 (ggplot grammar)", url: ""}
+
+predict:
+  skill: sc-limits
+  code: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      scale_x_continuous(limits = c(190, 210))
+  ask: "342 penguins have both measurements. How many points are drawn?"
+  options:
+    - {choice: "165", correct: true}
+    - choice: "342, zoomed in"
+      misconception: limits-zoom
+      probe: "Scale limits act on the data, before anything is drawn. What happens to a flipper of 180 mm?"
+    - choice: "An error: some values are outside the limits"
+      misconception: limits-error
+      probe: "ggplot warns rather than stops. What does the warning say it did?"
+  verify: 'sum(!is.na(suppressWarnings(ggplot2::layer_data(result))$x) & !is.na(suppressWarnings(ggplot2::layer_data(result))$y))'
+
+probes:
+  - id: p-zoom
+    skill: sc-limits
+    ask: "Which shows only flipper lengths 190–210 mm but keeps all the data (so a fitted line would still use every penguin)?"
+    options:
+      - {choice: "coord_cartesian(xlim = c(190, 210))", correct: true}
+      - choice: "scale_x_continuous(limits = c(190, 210))"
+        misconception: limits-zoom
+        probe: "Scale limits turn values outside them into NA. Would a fitted line still see those penguins?"
+      - choice: "xlim(190, 210)"
+        misconception: xlim-is-zoom
+        probe: "xlim() is a shortcut. A shortcut for which: a scale or a coord?"
+    right_followup: "Are you sure? When would you want the data outside the range removed?"
+    explain: >-
+      Scale limits (and their shortcuts xlim()/ylim()) remove the data
+      outside before stats run, so a smooth or a boxplot changes.
+      coord_cartesian(xlim = ) only zooms the camera; every computation still
+      uses all the data.
+  - id: p-log-axis
+    skill: sc-transform
+    ask: "With scale_y_log10(), what do equal distances on the y axis mean?"
+    options:
+      - {choice: "Equal ratios: each step multiplies the value", correct: true}
+      - choice: "Equal differences, as on a normal axis"
+        misconception: log-axis-linear
+        probe: "On a log scale, how far apart are 1 and 10, compared with 10 and 100?"
+      - choice: "The data values themselves were replaced by their logs"
+        misconception: log-changes-data
+        probe: "The axis labels still read 10, 100, 1000. Were the values changed, or only where they are placed?"
+    right_followup: "Are you sure? When is a log axis the honest choice?"
+    explain: >-
+      A log scale places values by their logarithm, so ×10 is always the
+      same distance, while the labels keep the original values. It suits
+      data that spans several orders of magnitude, or growth by percentages.

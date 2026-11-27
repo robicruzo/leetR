@@ -1,0 +1,103 @@
+- id: ae-mpg-scatter
+  tier: warm-up
+  type: write
+  skill: ae-map
+  data: mpg
+  prompt: "A scatter plot of mpg: engine size (displ) on x, highway mileage (hwy) on y."
+  hint: "ggplot(data, aes(x, y)) + one geom for points."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point()
+
+- id: ae-mpg-class-colour
+  tier: warm-up
+  type: write
+  skill: ae-map
+  data: mpg
+  prompt: "The same scatter plot, with the points coloured by the car's class."
+  hint: "Add colour = class to the mapping."
+  solution: |
+    ggplot(mpg, aes(displ, hwy, colour = class)) +
+      geom_point()
+
+- id: ae-fix-steelblue
+  tier: core
+  type: fix
+  skill: ae-const
+  prompt: "This should draw every point in steelblue, but the points come out red-orange with a legend. Fix it."
+  hint: "Is the colour data, or a setting?"
+  starter: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point(aes(colour = "steelblue"))
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point(colour = "steelblue")
+
+- id: ae-one-line
+  tier: core
+  type: write
+  skill: ae-inherit
+  prompt: >-
+    Flipper length (x) against body mass (y), points coloured by species,
+    with a single linear fit through all the penguins:
+    geom_smooth(method = "lm", formula = y ~ x).
+  hint: "Put colour = species where only the points will see it."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point(aes(colour = species)) +
+      geom_smooth(method = "lm", formula = y ~ x)
+
+- id: ae-size-alpha
+  tier: core
+  type: write
+  skill: ae-const
+  data: mpg
+  prompt: "mpg: displ against hwy, with point size mapped to the number of cylinders (cyl) and every point half transparent (alpha 0.5)."
+  hint: "One mapping inside aes(), one setting outside."
+  solution: |
+    ggplot(mpg, aes(displ, hwy, size = cyl)) +
+      geom_point(alpha = 0.5)
+
+- id: ae-lines-predict
+  tier: stretch
+  type: predict
+  skill: ae-inherit
+  prompt: "How many fitted lines does geom_smooth() draw?"
+  code: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+      geom_point() +
+      geom_smooth(method = "lm", formula = y ~ x)
+  options: ["3", "1", "6"]
+  verify: 'length(unique(ggplot2::layer_data(result, 2)$group))'
+  explain: "colour = species is in ggplot(), so geom_smooth() inherits it and fits one line per species."
+
+- id: ae-black-points-species-lines
+  tier: stretch
+  type: write
+  skill: ae-inherit
+  prompt: >-
+    Flipper length against body mass with all points in the default black,
+    but one linear fit per species, coloured by species
+    (method = "lm", formula = y ~ x).
+  hint: "This time the colour mapping belongs to the smooth layer only."
+  solution: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      geom_smooth(aes(colour = species), method = "lm", formula = y ~ x)
+
+- id: ae-simpson
+  tier: brain-melter
+  type: write
+  skill: ae-inherit
+  prompt: >-
+    Simpson's paradox in penguins: bill length (x) against bill depth (y).
+    In this order: points coloured by species, one black linear fit through
+    all the penguins, then one linear fit per species coloured by species
+    (all fits method = "lm", formula = y ~ x). The overall line slopes down,
+    the species lines slope up.
+  hint: "Three layers. The black line must not see the species, the coloured lines must."
+  solution: |
+    ggplot(penguins, aes(bill_length_mm, bill_depth_mm)) +
+      geom_point(aes(colour = species)) +
+      geom_smooth(method = "lm", formula = y ~ x, colour = "black") +
+      geom_smooth(aes(colour = species), method = "lm", formula = y ~ x)

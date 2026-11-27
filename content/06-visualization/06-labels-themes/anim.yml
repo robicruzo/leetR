@@ -1,0 +1,37 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point()
+    caption: "The default labels are the column names: fine for you, unclear for readers."
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point() +
+        labs(title = "Heavier penguins have longer flippers",
+             x = "Flipper length (mm)", y = "Body mass (g)", colour = "Species")
+    caption: "labs() adds a title that states the finding, axis titles with units, and a legend title named after its aesthetic: colour =."
+    skill: lt-labs
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point() +
+        labs(title = "Heavier penguins have longer flippers",
+             x = "Flipper length (mm)", y = "Body mass (g)", colour = "Species") +
+        theme_minimal() +
+        theme(legend.position = "bottom")
+    caption: "A complete theme first (theme_minimal() drops the grey background), then a tweak: the legend moves to the bottom."
+    skill: lt-theme
+  - code: |
+      ggplot(penguins, aes(flipper_length_mm, body_mass_g, colour = species)) +
+        geom_point() +
+        annotate("text", x = 221, y = 6300, label = "heaviest: 6,300 g", hjust = 1.1) +
+        labs(title = "Heavier penguins have longer flippers",
+             x = "Flipper length (mm)", y = "Body mass (g)", colour = "Species") +
+        theme_minimal() +
+        theme(legend.position = "bottom")
+    caption: "annotate() adds one-off text at given coordinates: a layer of its own, not tied to the data."
+    skill: lt-annotate
+  - code: |
+      ggplot(mpg, aes(fct_infreq(class))) +
+        geom_bar() +
+        labs(x = "Class", y = "Cars")
+    caption: "Ordered categories read faster: fct_infreq() sorts the bars from most to least common."
+    skill: lt-order

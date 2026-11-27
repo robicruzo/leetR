@@ -1,0 +1,25 @@
+plots:
+  - code: |
+      ggplot(penguins, aes(island)) +
+        geom_bar()
+    caption: "Penguins per island: one bar each, counted by geom_bar()."
+  - code: |
+      ggplot(penguins, aes(island, fill = species)) +
+        geom_bar()
+    caption: "fill = species splits each bar by species, stacked: the totals stay visible, but only the bottom segment starts at 0."
+    skill: po-stack
+  - code: |
+      ggplot(penguins, aes(island, fill = species)) +
+        geom_bar(position = "dodge")
+    caption: "position = \"dodge\" puts the species side by side. Every bar starts at 0, so counts compare directly."
+    skill: po-dodge
+  - code: |
+      ggplot(penguins, aes(island, fill = species)) +
+        geom_bar(position = "fill")
+    caption: "position = \"fill\" stretches every island to 1: now the bars show proportions within each island, and the totals are gone."
+    skill: po-fill
+  - code: |
+      ggplot(mpg, aes(cty, hwy)) +
+        geom_point(alpha = 0.2)
+    caption: "A different pile-up: many cars share the same mileages, so points sit on top of each other. Transparency makes the crowded spots darker."
+    skill: po-overlap

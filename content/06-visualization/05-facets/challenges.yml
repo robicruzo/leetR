@@ -1,0 +1,101 @@
+- id: fa-wrap-class
+  tier: warm-up
+  type: write
+  skill: fa-wrap
+  data: mpg
+  prompt: "displ against hwy, with a panel for each class of car."
+  hint: "facet_wrap(~ class)."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      facet_wrap(~ class)
+
+- id: fa-grid-drv-cyl
+  tier: warm-up
+  type: write
+  skill: fa-grid
+  data: mpg
+  prompt: "displ against hwy, in a grid with drive type (drv) in rows and cylinders (cyl) in columns."
+  hint: "facet_grid(rows ~ columns)."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      facet_grid(drv ~ cyl)
+
+- id: fa-free-y
+  tier: core
+  type: write
+  skill: fa-scales
+  prompt: "A histogram of body mass (binwidth 200) with one panel per species, each panel with its own y axis."
+  hint: "scales = \"free_y\" frees only the y axis."
+  solution: |
+    ggplot(penguins, aes(body_mass_g)) +
+      geom_histogram(binwidth = 200) +
+      facet_wrap(~ species, scales = "free_y")
+
+- id: fa-fix-tilde
+  tier: core
+  type: fix
+  skill: fa-wrap
+  data: mpg
+  prompt: "This should give one panel per class, but it stops with an error. Fix it."
+  hint: "facet_wrap() needs a formula (~ class) or vars(class)."
+  starter: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      facet_wrap(class)
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      facet_wrap(~ class)
+
+- id: fa-colour-instead
+  tier: core
+  type: write
+  skill: fa-vs-colour
+  data: mpg
+  prompt: "displ against hwy in a single panel, with the drive types told apart by colour."
+  hint: "No facets this time: map drv to colour."
+  solution: |
+    ggplot(mpg, aes(displ, hwy, colour = drv)) +
+      geom_point()
+
+- id: fa-rows-only
+  tier: stretch
+  type: write
+  skill: fa-grid
+  data: mpg
+  prompt: "displ against hwy with one row of panels per drive type, stacked vertically (no column variable)."
+  hint: "A grid with a dot for the empty side: drv ~ ."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      facet_grid(drv ~ .)
+
+- id: fa-shared-y
+  tier: stretch
+  type: predict
+  skill: fa-scales
+  prompt: "Do the three panels share the same y axis range?"
+  code: |
+    ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+      geom_point() +
+      facet_wrap(~ species, scales = "free_x")
+  options: ["Yes: only x is free", "No: each panel fits its own y", "No: free_x frees both axes"]
+  verify: 'if (length(unique(lapply(ggplot2::ggplot_build(result)$layout$panel_params, function(p) p$y.range))) == 1) "Yes: only x is free" else "No: each panel fits its own y"'
+  explain: "\"free_x\" frees only the x axis, so the panels keep one shared y range and masses compare across species."
+
+- id: fa-two-rows-fits
+  tier: brain-melter
+  type: write
+  skill: fa-wrap
+  data: mpg
+  prompt: >-
+    displ against hwy with one panel per class arranged in 2 rows, and a
+    linear fit in each panel (method = "lm", formula = y ~ x).
+  hint: "facet_wrap() takes nrow; geom_smooth() is fitted separately in every panel."
+  solution: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      geom_smooth(method = "lm", formula = y ~ x) +
+      facet_wrap(~ class, nrow = 2)

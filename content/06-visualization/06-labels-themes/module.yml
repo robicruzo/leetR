@@ -1,0 +1,70 @@
+id: 06-labels-themes
+title: "Labels, themes and annotations: plots for readers"
+key_idea: >-
+  A plot for others needs words: labs() sets the title, axis titles and
+  legend titles (named after the aesthetic, e.g. colour =). A complete theme
+  such as theme_minimal() restyles everything at once; theme() tweaks single
+  elements, and order matters, because a complete theme added later resets
+  earlier tweaks. annotate() adds one-off text or shapes as a layer, and
+  ordering categories (fct_infreq(), fct_reorder()) makes bars easier to read.
+subskills:
+  - {id: lt-labs, name: "labs(): title, axis and legend titles"}
+  - {id: lt-theme, name: "Complete themes, then theme() tweaks"}
+  - {id: lt-annotate, name: "annotate() adds a one-off layer"}
+  - {id: lt-order, name: "Order categories so the plot reads well"}
+readings:
+  - {label: "r4ds 11, Communication", url: "https://r4ds.hadley.nz/communication.html"}
+  - {label: "ggplot2: theme()", url: "https://ggplot2.tidyverse.org/reference/theme.html"}
+  - {label: "STAT 7500 primer ch. 4 (ggplot grammar)", url: ""}
+
+predict:
+  skill: lt-annotate
+  code: |
+    ggplot(mpg, aes(displ, hwy)) +
+      geom_point() +
+      annotate("text", x = 6, y = 40, label = "big engines")
+  ask: "How many layers does this plot have?"
+  options:
+    - {choice: "2", correct: true}
+    - choice: "1"
+      misconception: annotate-not-layer
+      probe: "annotate() draws something at given coordinates. How does ggplot draw anything, if not with a layer?"
+    - choice: "3"
+      misconception: ggplot-is-layer
+      probe: "Does ggplot() itself draw anything, or only set up the plot?"
+  verify: 'length(result$layers)'
+
+probes:
+  - id: p-legend-title
+    skill: lt-labs
+    ask: "The legend comes from aes(colour = species). Which labs() argument renames it?"
+    options:
+      - {choice: "colour = \"Species\"", correct: true}
+      - choice: "legend = \"Species\""
+        misconception: labs-has-legend
+        probe: "A plot can have several legends, one per aesthetic. How would labs() know which one you meant?"
+      - choice: "fill = \"Species\""
+        misconception: fill-is-colour
+        probe: "For points, which aesthetic carries the species: colour or fill?"
+    right_followup: "Are you sure? What happens if colour and shape both map species but get different titles?"
+    explain: >-
+      Legend titles are labels of aesthetics, so labs() names them after the
+      aesthetic: colour =, fill =, size =, shape =. If two aesthetics map the
+      same variable and share a title, ggplot merges them into one legend.
+  - id: p-theme-order
+    skill: lt-theme
+    ask: "Where is the legend after … + theme(legend.position = \"bottom\") + theme_minimal()?"
+    options:
+      - {choice: "On the right, the default", correct: true}
+      - choice: "At the bottom"
+        misconception: theme-order-free
+        probe: "theme_minimal() is a complete theme: it sets every element. What happens to a tweak made before it?"
+      - choice: "Nowhere: theme_minimal() removes legends"
+        misconception: minimal-removes-legend
+        probe: "Does theme_minimal() remove information, or only decoration such as the grey background?"
+    right_followup: "Are you sure? How do you get a minimal theme with the legend at the bottom?"
+    explain: >-
+      A complete theme replaces the whole theme, including your earlier
+      theme() tweaks. Add the complete theme first, then tweak:
+      theme_minimal() + theme(legend.position = "bottom").
+    verify: 'identical((ggplot2::ggplot(mpg, ggplot2::aes(displ, hwy, colour = drv)) + ggplot2::geom_point() + ggplot2::theme(legend.position = "bottom") + ggplot2::theme_minimal())$theme$legend.position, "right")'

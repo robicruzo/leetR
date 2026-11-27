@@ -88,6 +88,18 @@
 		if (result.passed) counted = progress.solved(key, ch, mod?.id ?? 'final', reviewId);
 	}
 
+	// Plot challenges: R draws the reference plot on request (its code stays hidden).
+	let expectedPlot = $state<ImageBitmap | string | null>(null);
+	async function drawExpected() {
+		const res = await engine.runSnippet(ch.solution ?? '');
+		expectedPlot = res.images.at(-1) ?? 'R could not draw the expected plot.';
+	}
+	function paint(canvas: HTMLCanvasElement, img: ImageBitmap) {
+		canvas.width = img.width;
+		canvas.height = img.height;
+		canvas.getContext('2d')?.drawImage(img, 0, 0);
+	}
+
 	async function reset() {
 		if (isPredict) {
 			code = ch.code ?? '';
@@ -210,6 +222,17 @@
 				{/if}
 				<details>
 					<summary>Expected result</summary>
+					{#if ch.plot}
+						<p class="small">{ch.expected}</p>
+						{#if expectedPlot && typeof expectedPlot === 'object'}
+							<canvas class="expected-plot" use:paint={expectedPlot}></canvas>
+						{:else if typeof expectedPlot === 'string'}
+							<p class="small">{expectedPlot}</p>
+						{:else}
+							<button onclick={drawExpected} disabled={!engineUp || working}>Draw the expected plot</button>
+						{/if}
+						<p class="small">Graded on what ggplot computes (geoms, the drawn values, facets, axis ranges), not on pixels.</p>
+					{:else}
 					<p class="small">
 						{ch.dims ?? ''}{ch.compare?.ignore_row_order ? ' · row order is not checked' : ''}{ch.compare
 							?.ignore_column_order
@@ -217,6 +240,7 @@
 							: ''}
 					</p>
 					<pre>{ch.expected}</pre>
+					{/if}
 				</details>
 				<p class="small">
 					Your code's last value is the answer. It runs on <code>{ch.data}</code>; Submit also re-runs it on half of
@@ -307,6 +331,15 @@
 		display: grid;
 		grid-template-rows: auto 1fr minmax(200px, 40%);
 		min-height: 0;
+	}
+	.expected-plot {
+		display: block;
+		max-width: 100%;
+		height: auto;
+		margin: 0.5rem 0;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		background: #fff;
 	}
 	.locked {
 		margin: 0;

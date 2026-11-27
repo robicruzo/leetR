@@ -72,9 +72,10 @@ export interface TrackChallenge {
 	data: string;
 	forbid: string[] | null;
 	require: string[] | null;
-	compare: { ignore_row_order?: boolean; ignore_column_order?: boolean } | null;
+	compare: { ignore_row_order?: boolean; ignore_column_order?: boolean; labels?: string[]; theme?: string[] } | null;
 	robust: boolean | null;
 	uses?: string[] | null; // other datasets the challenge needs (joins)
+	plot?: boolean; // the answer is a ggplot (graded on what ggplot computes)
 	dims?: string;
 	expected?: string;
 	options?: string[];
@@ -90,6 +91,8 @@ export interface Module {
 	predict: Mcq & { show_data?: boolean; data_table?: DataTable | null };
 	probes: (Mcq & { id: string })[];
 	anim: AnimStep[];
+	/** Plotting modules: complete ggplot code per step, drawn by R in the app. */
+	plots?: { code: string; caption: string; skill: string | null }[] | null;
 	challenges: TrackChallenge[];
 }
 
@@ -151,7 +154,9 @@ export function snippetOptions(ch: TrackChallenge): SnippetOptions {
 		ignore_column_order: ch.compare?.ignore_column_order ?? false,
 		forbid: ch.forbid ?? undefined,
 		require: ch.require ?? undefined,
-		robust: ch.robust === false ? false : undefined
+		robust: ch.robust === false ? false : undefined,
+		labels: ch.compare?.labels ?? undefined,
+		theme: ch.compare?.theme ?? undefined
 	};
 }
 

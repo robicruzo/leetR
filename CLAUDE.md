@@ -153,7 +153,7 @@ Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
 | 3 | Tidy data and reshaping (**built**) | what makes data tidy · pivot_longer · pivot_wider · separate_wider_* and unite · explicit vs implicit missing | 2 | r4ds 5, 18, MDSR 6, primer 8 |
 | 4 | Joins (**built**) | keys · mutating joins · filtering joins · duplicate keys, many-to-many · join_by inequality/rolling | 2 | r4ds 19, MDSR 5, primer 7 |
 | 5 | Real-world data types (**built**, one intro lubridate module) | import + cleaning (readr, janitor) · counts and proportions (marginal/joint/conditional) · stringr · regex · forcats · lubridate | 2 | r4ds 7, 14–17, primer 8–10 |
-| 6 | Visualization | aes vs constants · geoms and stats · positions (counts vs proportions) · scales and coords · facets · labels/themes/annotations | 2 | r4ds 1, 9–11, MDSR 2–3, primer 4–5 |
+| 6 | Visualization (**built**) | aes vs constants · geoms and stats · positions (counts vs proportions) · scales and coords · facets · labels/themes/annotations | 2 | r4ds 1, 9–11, MDSR 2–3, primer 4–5 |
 | 7 | Programming | functions · conditionals · for loops + preallocation · map family · tidy eval `{{ }}` `.data` · errors/warnings/stopifnot | 2 | r4ds 25–26, MDSR 7, Adv R 8, primer 11 |
 | 8 | R internals | names/values, copy-on-modify · environments, scoping · closures, function factories · lazy evaluation · S3 | 7 | Adv R 2, 6–7, 10, 13 |
 | 9 | Statistics with R | d/p/q/r · simulation · bootstrap · lm() | 6, 7 | MDSR 9, 13, App. E, primer 11 |
@@ -231,6 +231,23 @@ check only); `scripts/fetch-assets.mjs` mirrors both from repo.r-wasm.org.
    An 80% sample let six "extremes" challenges (top five, max per group) pass
    with a literal; half does not.
 
+**Grading a plot** (Track 6, `compare_plots()` in grader.R): when the
+reference value is a ggplot, the two plots are built with `ggplot_build()`
+and compared on what ggplot computes, never pixels:
+1. the geoms, in order (`geom_col` counts as `geom_bar`);
+2. the facet panels (count and facet variables);
+3. each layer's drawn columns (x, y, ymin…, colour, fill, size, …),
+   ignoring row order, so `count() |> geom_col()` matches `geom_bar()`;
+   scale limits that turn points into NA get a plain-language message
+   pointing to `coord_cartesian()`;
+4. the axis ranges, which tell zooming apart from no zooming;
+5. only if the challenge lists them, labels (`compare: {labels: [title,
+   x, "y"]}`) and theme settings (`compare: {theme: [legend.position]}`).
+The half-sample re-run applies to plots too. Plot challenges get
+`plot: true` and an `expected` description ("A plot: geom_point +
+geom_smooth"); the app's "Draw the expected plot" button runs the hidden
+solution in R.
+
 **selftest.R** fails the build unless: every solution passes against itself;
 every fix starter fails; a `deparse()`d literal of each expected answer fails
 (unless `robust: false`; skipped for answers over 2,000 rows, which nobody
@@ -245,6 +262,7 @@ Totals:
 | 4, `content/04-joins` | 5 | 18 | 40 | 10 | 21 | 1,208 |
 | 1, `content/01-foundations` | 6 | 24 | 48 | 12 | 25 | 1,162 |
 | 5, `content/05-real-data` | 6 | 24 | 48 | 12 | 27 | 1,272 |
+| 6, `content/06-visualization` | 6 | 23 | 48 | 12 | 32 plot steps | 1,339 |
 
 ### Content format
 
@@ -311,6 +329,11 @@ YAML 1.1 reads as TRUE). Its rows are keyed `y1, y2, …`, its columns `y:<name>
     join: true                                 # x tiles stay, y tiles fly to their matched rows
 ```
 A joined row's key is `<x id>+<y id>` (or one of them for unmatched rows).
+
+Plotting modules (Track 6) use `plots:` instead of `steps:` in anim.yml:
+each is complete ggplot code plus a caption and skill. The build checks
+each builds; the app's `PlotStack` draws them one by one with R in the
+browser (the "layer stack": axes, then points, then colour, …).
 Filtering joins keep `.id` and need nothing special.
 Row identity is the hidden `.id` column (tile key `<row key>|<column id>`).
 After `split`, row keys become `<id>:<name>`. Rows a step adds with no source
@@ -460,6 +483,14 @@ It runs under webR (`.build_args` set by check.mjs) or native R
 7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
    new track is a `content/<NN-name>/` folder; the routes and the content
    check pick it up automatically.
+6. ~~**Track 6, visualization.**~~ **Done 2026-11-27**: 6 modules with
+   plot grading (above) and the layer-stack Watch view. Checked in the
+   browser: steps draw in under a second, R starts in about 6 s with ggplot2
+   attached, plot challenges grade (alternative code passes, typical
+   mistakes get specific messages), and the production build prerenders all
+   347 pages.
+   Next: the full lubridate track (time zones, the timeline-ruler visual),
+   or Tracks 7–10 (programming, R internals, statistics, capstones).
 8. ~~**Deploy to GitHub Pages.**~~ **Done 2026-11-24**: every push to main
    builds and deploys (`.github/workflows/deploy.yml`) to
    https://robicruzo.github.io/leetR/. Tested locally first with
@@ -504,7 +535,12 @@ It runs under webR (`.build_args` set by check.mjs) or native R
   carry an `Origin` header that precache requests don't, so `cache.match`
   missed every lazily loaded chunk offline. The fix is `ignoreVary: true`.
 - YAML 1.1 again: an anim.yml key `y:` silently became `TRUE`, so the
-  second table never loaded. Hence `with:`.
+  second table never loaded. Hence `with:`. And a third time:
+  `compare: {labels: [x, y]}` became `[x, TRUE]`, so a missing y-axis title
+  passed. Write `"y"`; build.R now fails non-text label or theme names.
+- Svelte components are also rendered on the server (prerendering), where
+  browser-only classes such as `ImageBitmap` don't exist: `x instanceof
+  ImageBitmap` crashed the page. Test with `typeof x === 'object'`.
 - Grading errors used to vanish into an empty "Wrong answer". The engine now
   grades with captured conditions and `throwJsException: false` (like Run),
   and if R returns no result it reports the captured R error, reading its
