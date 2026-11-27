@@ -60,3 +60,48 @@ sentences_df <- tibble(sentence = stringr::sentences)
 # column names, an empty row and an empty column.
 raw_scores <- "student,score,submitted\nAna,92,2026-09-01\nBo,n/a,2026-09-03\nCy,-,2026-09-02\nDee,78,missing"
 raw_messy <- "Student Name,Score (%),Notes,\nAna,92,,\n,,,\nBo,78,late,"
+
+# Dates and times (Track 11). Made-up sign-up dates typed month/day/year,
+# five of which can't be parsed that way; and dates written three ways.
+signups <- tibble(
+  id = 1:16,
+  signed_up = c("01/15/2026", "02/03/2026", "02/30/2026", "03/11/2026", "04/31/2026",
+                "05/05/2026", "06/18/2026", "13/01/2026", "07/24/2026", "08/22/2026",
+                "09/09/2026", "", "10/12/2026", "11/30/2026", "12/25/2026", "2026-12-31")
+)
+mixed_dates <- tibble(
+  event = c("kickoff", "deadline", "launch", "review", "holiday", "party", "picnic", "demo"),
+  when  = c("2026-01-02", "03/14/2026", "5 June 2026", "2026-11-30",
+            "12/25/2026", "1 May 2026", "07/24/2026", "2026-02-14")
+)
+
+# The timeline ruler: named moments as points on one time axis, labelled
+# with their clock reading, and an optional dashed line where the clocks
+# change. Moments that are NA can't be placed; they are listed below.
+#   ruler(start = t, "+ ddays(1)" = t + ddays(1), change = jump)
+ruler <- function(..., change = NULL) {
+  pts <- list(...)
+  times <- do.call(c, lapply(unname(pts), function(x) if (is.Date(x)) as_datetime(x) else x))
+  d <- tibble(label = names(pts), time = times, level = seq_along(pts))
+  dates_only <- all(vapply(pts, is.Date, TRUE))
+  shown <- format(d$time, if (dates_only) "%a %d %b %Y" else "%d %b %H:%M %Z")
+  d$text <- paste0(d$label, "\n", shown)
+  missing <- d$label[is.na(d$time)]
+  d <- d[!is.na(d$time), ]
+  p <- ggplot(d, aes(time, 0)) +
+    geom_hline(yintercept = 0, colour = "grey55") +
+    geom_segment(aes(xend = time, yend = level), colour = "grey75") +
+    geom_point(size = 3) +
+    geom_label(aes(y = level, label = text), size = 3.6, linewidth = 0, lineheight = 0.95) +
+    scale_y_continuous(NULL, breaks = NULL, limits = c(-0.8, length(pts) + 0.6)) +
+    scale_x_datetime(NULL, expand = expansion(mult = 0.18),
+                     date_labels = if (dates_only) "%d %b" else "%d %b\n%H:%M") +
+    theme_minimal(base_size = 13)
+  if (!is.null(change)) {
+    p <- p +
+      geom_vline(xintercept = change, linetype = "dashed", colour = "firebrick") +
+      annotate("text", x = change, y = -0.55, label = "clocks change", colour = "firebrick", size = 3.6)
+  }
+  if (length(missing)) p <- p + labs(caption = paste("Not on the ruler (NA):", paste(missing, collapse = ", ")))
+  p
+}

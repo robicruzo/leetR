@@ -4,7 +4,7 @@ LeetCode-style R challenges graded by real R in the browser ([webR](https://docs
 
 It has two kinds of content:
 
-- **Tracks** (`content/`): lessons built on a Socratic loop, Predict → Watch → Probe → Do → Review. Each module has a prediction question, a table-morph animation built from real R output, misconception probes, and 8 pipeline challenges graded by R. Six tracks are written, 280 challenges in all: 1 *R foundations*, 2 *One-table wrangling*, 3 *Tidy data and reshaping*, 4 *Joins* (on nycflights13), 5 *Real-world data* (readr, janitor, stringr, regex, forcats, lubridate) and 6 *Visualization* (ggplot2: plots are graded on what ggplot computes, not on pixels). Skill levels and spaced review are kept in IndexedDB.
+- **Tracks** (`content/`): lessons built on a Socratic loop, Predict → Watch → Probe → Do → Review. Each module has a prediction question, a table-morph animation built from real R output, misconception probes, and 8 pipeline challenges graded by R. Seven tracks are written, 320 challenges in all: 1 *R foundations*, 2 *One-table wrangling*, 3 *Tidy data and reshaping*, 4 *Joins* (on nycflights13), 5 *Real-world data* (readr, janitor, stringr, regex, forcats, lubridate), 6 *Visualization* (ggplot2: plots are graded on what ggplot computes, not on pixels) and 11 *Dates and times* (lubridate: parsing, rounding, periods vs durations, intervals, time zones, with a timeline ruler drawn by R). Skill levels and spaced review are kept in IndexedDB.
 - **Practice challenges** (`src/challenges/`): write a function. It is graded against hidden cases and property tests on random inputs.
 
 ## Running it
@@ -124,7 +124,7 @@ On each case the grader calls both the user's function and the reference, then c
 
 ## Known gaps / next steps
 
-- Tracks 1–6 are written; Tracks 7–10 (programming, R internals, statistics, capstones) and the full lubridate track are not. CLAUDE.md §4 has the curriculum and §7 the next steps.
+- Tracks 1–6 and 11 are written; Tracks 7–10 (programming, R internals, statistics, capstones) are not. CLAUDE.md §4 has the curriculum and §7 the next steps.
 - `yaml` and `jsonlite` are mirrored for the content check, so the app also precaches them (about 1 MB it never uses).
 - The soft interrupt didn't stop a bare `repeat {}` in testing, so the worker-restart fallback is what actually ends runaway loops.
 - `grader.R` runs in the same R session as user code. A determined user can tamper with `.leetr`. That's fine for practice, but don't use it for anything high-stakes.

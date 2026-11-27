@@ -1,0 +1,72 @@
+id: 02-components
+title: "Components and rounding"
+key_idea: >-
+  A date-time is one number (seconds since 1970-01-01 00:00 UTC), but you
+  can ask it for any part: year(), month(), mday(), yday(), wday(), hour().
+  With label = TRUE, month() and wday() return ordered factors, so they sort
+  in calendar order, not alphabetically. floor_date(), round_date() and
+  ceiling_date() snap a time to a unit (an hour, a week, 15 minutes), which
+  is how you group times into bins. Which day a week starts on is a setting,
+  week_start, and it changes both the weekday numbers and the weekly bins.
+subskills:
+  - {id: dc-get, name: "year(), month(), yday(), hour(): pull out a part"}
+  - {id: dc-label, name: "label = TRUE gives an ordered factor"}
+  - {id: dc-week, name: "week_start: the day a week begins"}
+  - {id: dc-round, name: "floor_date(), round_date(), ceiling_date() to a unit"}
+  - {id: dc-set, name: "update(): change one part"}
+readings:
+  - {label: "r4ds 17.3, Date-time components", url: "https://r4ds.hadley.nz/datetimes.html#date-time-components"}
+  - {label: "lubridate: round_date()", url: "https://lubridate.tidyverse.org/reference/round_date.html"}
+  - {label: "STAT 7500 primer ch. 10 (strings and dates)", url: ""}
+
+predict:
+  skill: dc-week
+  code: |
+    floor_date(ymd("2026-03-11"), "week")
+  ask: "11 March 2026 is a Wednesday. What does this return?"
+  options:
+    - {choice: "2026-03-08", correct: true}
+    - choice: "2026-03-09"
+      misconception: week-starts-monday
+      probe: "In lubridate's default, which day starts the week? wday() numbers that day 1."
+    - choice: "2026-03-01"
+      misconception: floor-to-month
+      probe: "You asked for the unit \"week\". Would rounding down to a week jump back to the first of the month?"
+  verify: 'as.character(result)'
+
+probes:
+  - id: p-label-order
+    skill: dc-label
+    ask: "flights |> count(month = month(time_hour, label = TRUE)): in which order do the rows come?"
+    options:
+      - {choice: "Jan, Feb, Mar, … (calendar order)", correct: true}
+      - choice: "Apr, Aug, Dec, … (alphabetical)"
+        misconception: labels-are-text
+        probe: "label = TRUE returns an ordered factor, not text. How does count() sort a factor: by its letters, or by its levels?"
+      - choice: "From the most flights to the fewest"
+        misconception: count-sorts-by-n
+        probe: "count() sorts by n only when you ask it to. Which argument does that?"
+    right_followup: "Are you sure? Then what order would you get with as.character(month(time_hour, label = TRUE))?"
+    explain: >-
+      month(label = TRUE) returns an ordered factor whose levels run Jan to
+      Dec, and count() sorts a factor by its levels, so the rows come in
+      calendar order. Turned into text, the same labels would sort
+      alphabetically: Apr, Aug, Dec, …
+    verify: 'identical(as.character(flights |> count(month = month(time_hour, label = TRUE)) |> pull(month)), month.abb)'
+  - id: p-ceiling
+    skill: dc-round
+    ask: "What does ceiling_date(ymd(\"2026-03-01\"), \"month\") return?"
+    options:
+      - {choice: "2026-04-01", correct: true}
+      - choice: "2026-03-01"
+        misconception: boundary-stays
+        probe: "A Date stands for the whole day, 1 March from midnight to midnight. Is all of that day already at the boundary, or does it run past it?"
+      - choice: "2026-03-31"
+        misconception: ceiling-is-last-day
+        probe: "floor_date() gives the first moment of the unit. Does ceiling_date() give the last day, or the first moment of the next unit?"
+    right_followup: "Are you sure? What would the same call give for the date-time 2026-03-01 00:00:00?"
+    explain: >-
+      ceiling_date() rounds up to the start of the next unit. A Date covers a
+      whole day, so 1 March is rounded up to 1 April. A date-time at exactly
+      2026-03-01 00:00:00 sits on the boundary and stays where it is.
+    verify: 'as.character(ceiling_date(ymd("2026-03-01"), "month")) == "2026-04-01" && format(ceiling_date(ymd_hms("2026-03-01 00:00:00"), "month")) == "2026-03-01"'

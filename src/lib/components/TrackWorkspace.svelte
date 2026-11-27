@@ -17,6 +17,7 @@
 		challengeKey,
 		predictQuestion,
 		shortTitle,
+		shownData,
 		snippetOptions,
 		starterCode,
 		type Module,
@@ -197,10 +198,10 @@
 				<div class="meta">
 					<span class="tier {ch.tier}">{ch.tier}</span>
 					<span class="tier">{ch.type}</span>
-					<span class="tier">data: {ch.data}</span>
+					{#if shownData(ch).length}<span class="tier">data: {shownData(ch).join(", ")}</span>{/if}
 				</div>
 				<p class="prompt">{ch.prompt}</p>
-				{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
+				{#each shownData(ch) as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
 				{#if isPredict}
 					<p class="small">Predict first. Once you answer, the code on the right opens: run it to check, or change it and see what happens.</p>
 					{#if progress.loaded}

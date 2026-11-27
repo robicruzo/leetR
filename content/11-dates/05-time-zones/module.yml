@@ -1,0 +1,76 @@
+id: 05-time-zones
+title: "Time zones: with_tz() vs force_tz()"
+key_idea: >-
+  A date-time is one instant, stored as seconds since 1970-01-01 00:00 UTC.
+  Its time zone (the tzone attribute) only decides how that instant is
+  printed. with_tz() keeps the instant and shows it on another clock: noon
+  in New York is 16:00 UTC. force_tz() keeps the clock reading and changes
+  the zone, which moves the instant: use it to repair times that were read
+  in the wrong zone. Parsers default to UTC, not to your zone or the data's,
+  and a date depends on the zone: 21:00 on New Year's Eve in New York is
+  already 1 January in UTC.
+subskills:
+  - {id: dz-instant, name: "One instant; the zone only changes how it prints"}
+  - {id: dz-with, name: "with_tz(): same instant, another clock"}
+  - {id: dz-force, name: "force_tz(): same clock, another instant"}
+  - {id: dz-utc, name: "Parsers and make_datetime() default to UTC"}
+  - {id: dz-local-date, name: "The date depends on the zone"}
+readings:
+  - {label: "r4ds 17.5, Time zones", url: "https://r4ds.hadley.nz/datetimes.html#time-zones"}
+  - {label: "lubridate: with_tz()", url: "https://lubridate.tidyverse.org/reference/with_tz.html"}
+  - {label: "lubridate: force_tz()", url: "https://lubridate.tidyverse.org/reference/force_tz.html"}
+
+predict:
+  skill: dz-instant
+  code: |
+    w <- ymd_hms("2026-07-01 12:00:00", tz = "America/New_York")
+    with_tz(w, "UTC") == w
+  ask: "with_tz() shows w on the UTC clock, 16:00. Is the result equal to w?"
+  options:
+    - {choice: "TRUE", correct: true}
+    - choice: "FALSE"
+      misconception: tz-changes-instant
+      probe: "with_tz() changed what the clock shows. Did it change the moment itself? What does == compare for date-times?"
+    - choice: "NA"
+      misconception: zones-incomparable
+      probe: "Could R compare two moments only if they were printed in the same zone? What is stored underneath?"
+  verify: 'as.character(result)'
+
+probes:
+  - id: p-force-gap
+    skill: dz-force
+    ask: >-
+      x <- ymd_hms("2026-07-01 12:00:00") is in UTC. y <- force_tz(x,
+      "America/New_York") reads 12:00 EDT. How far apart are x and y as
+      moments?
+    options:
+      - {choice: "4 hours", correct: true}
+      - choice: "0: they are the same moment"
+        misconception: force-is-with
+        probe: "force_tz() kept the clock reading, 12:00, and changed the zone. Is noon in New York the same moment as noon in UTC?"
+      - choice: "It depends on the computer's time zone"
+        misconception: local-zone-matters
+        probe: "Both x and y carry their own zone. Does the computer's setting enter into either?"
+    right_followup: "Are you sure? Would the answer be the same for 12:00 on 1 January?"
+    explain: >-
+      Noon in New York in July (EDT, UTC-4) happens 4 hours after noon UTC,
+      so force_tz() moved the instant by 4 hours. In January, New York is on
+      EST (UTC-5), so the gap would be 5 hours.
+    verify: 'as.numeric(force_tz(ymd_hms("2026-07-01 12:00:00"), "America/New_York") - ymd_hms("2026-07-01 12:00:00"), units = "hours") == 4 && as.numeric(force_tz(ymd_hms("2026-01-01 12:00:00"), "America/New_York") - ymd_hms("2026-01-01 12:00:00"), units = "hours") == 5'
+  - id: p-default-utc
+    skill: dz-utc
+    ask: "make_datetime(2013, 1, 1, 5): which time zone is this date-time in?"
+    options:
+      - {choice: "UTC", correct: true}
+      - choice: "America/New_York, like the flights"
+        misconception: tz-from-data
+        probe: "make_datetime() gets five numbers. Can it know they came from New York?"
+      - choice: "The computer's own time zone"
+        misconception: local-default
+        probe: "base R's as.POSIXct() does use your computer's zone. Is lubridate's default the same?"
+    right_followup: "Are you sure? Then is make_datetime(year, month, day, hour) equal to flights$time_hour?"
+    explain: >-
+      lubridate's parsers and make_datetime() use UTC unless you pass tz =.
+      So make_datetime(year, month, day, hour) is 5 (or 4) hours off from
+      flights$time_hour; with tz = "America/New_York" they are equal.
+    verify: 'tz(make_datetime(2013, 1, 1, 5)) == "UTC" && isTRUE(all.equal(make_datetime(flights$year, flights$month, flights$day, flights$hour, tz = "America/New_York"), flights$time_hour))'

@@ -1,0 +1,15 @@
+data: 'tibble(text = c("9/1/2026", "10/1/2026", "2/30/2026", "11/1/2026", "12/25/2026"))'
+steps:
+  - code: ""
+    caption: "Five dates written month/day/year. To R they are text: a column of characters."
+  - code: "arrange(text)"
+    caption: "Sorted as text, \"10/1\", \"11/1\" and \"12/25\" come first, because the character \"1\" is smaller than \"2\" and \"9\". R compares text character by character, not by meaning."
+    skill: dp-text
+  - code: "mutate(date = mdy(text))"
+    caption: "mdy() reads month, day, year and returns a Date. \"2/30/2026\" names 30 February, which doesn't exist: NA, and R warns that 1 failed to parse."
+    skill: dp-order
+  - code: "arrange(date)"
+    caption: "Sorted by the Date column, the rows follow the calendar: September, October, November, December. arrange() puts the NA last."
+  - code: "filter(is.na(date))"
+    caption: "The failures are easy to find once parsed: the rows whose date is NA. Always look, because a warning scrolls past and an NA stays."
+    skill: dp-na

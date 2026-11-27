@@ -1,0 +1,73 @@
+id: 04-intervals
+title: "Intervals and time differences"
+key_idea: >-
+  Subtracting two date-times gives a difftime: a number plus a unit that R
+  picks for you (secs, mins, hours or days), so as.numeric() alone can
+  return days for one vector and hours for another. Ask for the unit you
+  want. An interval, start %--% end, keeps both ends on the timeline, so it
+  can answer questions a bare length can't: is this moment inside
+  (%within%), do two spans overlap (int_overlaps()), and how many calendar
+  months or years does it cover (time_length()), which is how ages are
+  computed.
+subskills:
+  - {id: di-difftime, name: "Subtraction gives a difftime with a unit R picks"}
+  - {id: di-interval, name: "interval() and %--%: a span with two ends"}
+  - {id: di-length, name: "time_length() in hours, days or calendar years"}
+  - {id: di-within, name: "%within% and int_overlaps(), ends included"}
+readings:
+  - {label: "r4ds 17.4.3, Intervals", url: "https://r4ds.hadley.nz/datetimes.html#intervals"}
+  - {label: "lubridate: interval()", url: "https://lubridate.tidyverse.org/reference/interval.html"}
+  - {label: "dplyr: join_by() overlaps", url: "https://dplyr.tidyverse.org/reference/join_by.html"}
+
+predict:
+  skill: di-difftime
+  code: |
+    ymd_hms("2005-08-31 06:00:00") - ymd_hms("2005-08-23 18:00:00")
+  ask: "Hurricane Katrina was observed from 23 August 18:00 to 31 August 06:00. How does this difference print?"
+  options:
+    - {choice: "7.5 days", correct: true}
+    - choice: "180 hours"
+      misconception: difftime-in-hours
+      probe: "Both times have hours in them. Does R keep the unit of the inputs, or pick the largest unit that gives a sensible number?"
+    - choice: "648000 secs"
+      misconception: difftime-in-seconds
+      probe: "Date-times are stored as seconds. Does subtraction show you that raw number, or convert it?"
+  verify: 'format(result)'
+
+probes:
+  - id: p-within-end
+    skill: di-within
+    ask: "What does ymd(\"2026-03-01\") %within% interval(ymd(\"2026-01-01\"), ymd(\"2026-03-01\")) return?"
+    options:
+      - {choice: "TRUE", correct: true}
+      - choice: "FALSE"
+        misconception: interval-half-open
+        probe: "Many ranges in programming leave out their end. Does a lubridate interval include the moment it ends?"
+      - choice: "NA"
+        misconception: date-vs-interval-na
+        probe: "Both the date and the interval are made from dates. Is anything here missing or undefined?"
+    right_followup: "Are you sure? Then do interval(Jan 1, Feb 1) and interval(Feb 1, Mar 1) overlap?"
+    explain: >-
+      A lubridate interval includes both ends, so its end date is %within%
+      it. For the same reason int_overlaps() says that two intervals that
+      only touch, one ending on 1 February and the next starting then, do
+      overlap.
+    verify: 'ymd("2026-03-01") %within% interval(ymd("2026-01-01"), ymd("2026-03-01")) && int_overlaps(interval(ymd("2026-01-01"), ymd("2026-02-01")), interval(ymd("2026-02-01"), ymd("2026-03-01")))'
+  - id: p-difftime-units
+    skill: di-difftime
+    ask: "x <- ymd_hms(\"2026-01-01 00:00:00\"). What is as.numeric((x + dhours(36)) - x)?"
+    options:
+      - {choice: "1.5", correct: true}
+      - choice: "36"
+        misconception: difftime-keeps-hours
+        probe: "You added hours, but the subtraction makes a new difftime. Which unit does R pick for 36 hours?"
+      - choice: "129600"
+        misconception: difftime-in-seconds
+        probe: "as.numeric() strips the unit. Which unit was the difftime in?"
+    right_followup: "Are you sure? How would you get 36 no matter which unit R picks?"
+    explain: >-
+      R picks the unit from the size of the difference: 36 hours is more
+      than a day, so the difftime is 1.5 days and as.numeric() drops the
+      unit, leaving 1.5. Name the unit to be safe: as.numeric(d, units =
+      "hours") or time_length(d, "hour") gives 36.
+    verify: 'as.numeric((ymd_hms("2026-01-01 00:00:00") + dhours(36)) - ymd_hms("2026-01-01 00:00:00")) == 1.5'

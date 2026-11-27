@@ -1,0 +1,26 @@
+data: |
+  storms |>
+    filter(year == 2005, name %in% c("Harvey", "Jose", "Katrina", "Lee", "Maria")) |>
+    mutate(time = make_datetime(year, month, day, hour)) |>
+    summarise(start = min(time), end = max(time), .by = name)
+steps:
+  - code: ""
+    caption: "Five Atlantic storms of 2005 with their first and last observation."
+  - code: "mutate(lasted = end - start)"
+    show: "end - start"
+    caption: "Subtraction gives a difftime. R picks one unit for the whole column, here days, because the shortest storm (Jose) lasted a full day. With a storm under a day, the whole column would be in hours."
+    skill: di-difftime
+  - code: 'mutate(span = start %--% end, .keep = "unused")'
+    show: 'start %--% end'
+    caption: "An interval keeps both ends. (.keep = \"unused\" drops start and end, which the interval now holds.) Unlike a length, it knows where it sits on the timeline."
+    skill: di-interval
+  - code: 'mutate(hours = time_length(span, "hour"))'
+    show: 'time_length(span, "hour")'
+    caption: "time_length() measures an interval in the unit you name: Katrina 180 hours, Jose 24."
+    skill: di-length
+  - code: 'mutate(on_29 = ymd("2005-08-29") %within% span)'
+    show: 'ymd("2005-08-29") %within% span'
+    caption: "Because an interval has ends, it can answer \"was this storm active on 29 August?\": TRUE for Katrina and Lee."
+    skill: di-within
+  - code: "filter(on_29)"
+    caption: "Keep the storms active that day. The data show Katrina at the Louisiana coast (29.3° N, 89.6° W) on 29 August, and Lee, a tropical depression, far out in the Atlantic near 50° W."

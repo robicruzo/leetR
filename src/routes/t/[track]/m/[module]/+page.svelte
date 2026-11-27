@@ -9,7 +9,7 @@
 	import TableMorph from '#lib/components/TableMorph.svelte';
 	import TrackNav from '#lib/components/TrackNav.svelte';
 	import { progressFor, type AnswerState } from '#lib/progress.svelte.ts';
-	import { answerKey, challengeKey, predictQuestion, shortTitle, type Option, type TrackChallenge } from '#lib/tracks.ts';
+	import { answerKey, challengeKey, predictQuestion, shortTitle, shownData, type Option, type TrackChallenge } from '#lib/tracks.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -182,13 +182,13 @@
 				<div class="meta">
 					<span class="tier {ch.tier}">{ch.tier}</span>
 					<span class="tier">{ch.type}</span>
-					<span class="tier">data: {ch.data}</span>
+					{#if shownData(ch).length}<span class="tier">data: {shownData(ch).join(", ")}</span>{/if}
 					{#if st}<span class="status" class:ok-text={st === 'clean'}>{statusLabel[st]}</span>{/if}
 				</div>
 				<p><b>{i + 1}.</b> {ch.prompt}</p>
 				{#each rules(ch) as r (r)}<p class="small">{r}</p>{/each}
 				{#if ch.type === 'predict'}
-					{#each [ch.data, ...(ch.uses ?? [])] as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
+					{#each shownData(ch) as d (d)}<DataColumns name={d} info={track.datasets[d]} />{/each}
 					{#if progress.loaded}
 						{@const akey = answerKey(track, m, ch)}
 						<Mcq

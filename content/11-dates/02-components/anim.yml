@@ -1,0 +1,27 @@
+data: 'tibble(t = ymd_hms(c("2026-03-11 14:40:00", "2026-03-08 09:05:00", "2026-03-14 23:50:00", "2026-03-09 00:20:00", "2026-03-15 12:20:00")))'
+steps:
+  - code: ""
+    caption: "Five date-times in one week of March 2026. Each is stored as a single number of seconds; the parts are computed when you ask."
+  - code: "mutate(wday = wday(t, label = TRUE))"
+    show: "wday(t, label = TRUE)"
+    caption: "wday() gives the day of the week. With label = TRUE it is an ordered factor (Sun < Mon < … < Sat), so it sorts in week order."
+    skill: dc-label
+  - code: "mutate(hour = hour(t))"
+    show: "hour(t)"
+    caption: "hour() pulls out the hour, 0 to 23. year(), month(), mday(), yday() and minute() work the same way."
+    skill: dc-get
+  - code: 'mutate(nearest = round_date(t, "hour"))'
+    show: 'round_date(t, "hour")'
+    caption: "round_date() snaps to the nearest hour: 14:40 becomes 15:00, and 23:50 on Saturday becomes midnight, which is already Sunday."
+    skill: dc-round
+  - code: 'mutate(week = floor_date(t, "week"))'
+    show: 'floor_date(t, "week")'
+    caption: "floor_date() rounds down to the start of the unit. A week starts on Sunday by default, so the first four times share Sunday 8 March and the last one is Sunday 15 March."
+    skill: dc-week
+  - code: "count(week)"
+    merge: {by: [week], pour: {"n": t}}
+    caption: "Counting by the floored week puts the times into weekly bins: 4 in the week of 8 March, 1 in the week of 15 March."
+  - from_data: true
+    code: 'count(week = floor_date(t, "week", week_start = 1))'
+    merge: {by: [week], pour: {"n": t}}
+    caption: "The same five times with weeks starting on Monday (week_start = 1): Sunday 8 March now belongs to the week of Monday 2 March, and Sunday 15 March joins the week of 9 March. The bins changed, not the data."

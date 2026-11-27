@@ -1,0 +1,139 @@
+- id: iv-int-length
+  tier: warm-up
+  type: predict
+  skill: di-interval
+  prompt: "What does this return?"
+  code: |
+    int_length(ymd("2026-01-01") %--% ymd("2026-01-02"))
+  options: ["86400", "1", "24"]
+  verify: 'as.character(result)'
+  explain: "int_length() gives an interval's length in seconds: one day is 86,400. time_length(x, \"day\") would give 1."
+
+- id: iv-storm-hours
+  tier: warm-up
+  type: write
+  skill: di-length
+  data: storms
+  prompt: >-
+    For each storm (name and year), hours: the time from its first to its
+    last observation, in hours. Build each observation's time with
+    make_datetime(year, month, day, hour).
+  hint: "time_length(interval(min(time), max(time)), \"hour\") inside summarise(..., .by = c(name, year))."
+  solution: |
+    storms |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(hours = time_length(interval(min(time), max(time)), "hour"), .by = c(name, year))
+  compare: {ignore_row_order: true}
+
+- id: iv-game-gaps
+  tier: core
+  type: write
+  skill: di-difftime
+  data: lakers
+  prompt: >-
+    For each lakers game date (parsed as a Date): n, the number of plays
+    recorded that day, and days_since, the number of days since the previous
+    game as a plain number (NA for the first). Return date, n and
+    days_since, in date order.
+  hint: "count(date = ymd(date)) sorts by date; then date - lag(date) is a difftime in days, and as.numeric() makes it a number."
+  solution: |
+    lakers |>
+      count(date = ymd(date)) |>
+      mutate(days_since = as.numeric(date - lag(date)))
+
+- id: iv-fix-hours
+  tier: core
+  type: fix
+  skill: di-difftime
+  data: storms
+  prompt: >-
+    This should give each storm's duration in hours, but most numbers are
+    days and only the shortest storms come out in hours. Fix it.
+  hint: "Each storm's difference is its own difftime, with its own unit. Tell as.numeric() which unit you want."
+  starter: |
+    storms |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(hours = as.numeric(max(time) - min(time)), .by = c(name, year))
+  solution: |
+    storms |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(hours = as.numeric(max(time) - min(time), units = "hours"), .by = c(name, year))
+  compare: {ignore_row_order: true}
+
+- id: iv-sept-first
+  tier: core
+  type: write
+  skill: di-within
+  data: storms
+  prompt: >-
+    For each year, how many storms were active on 1 September of that year?
+    A storm (name and year) is active from its first to its last
+    observation, ends included. Return year and n (years with none can be
+    left out).
+  hint: "Summarise each storm's start and end, then filter(make_date(year, 9, 1) %within% interval(start, end)) and count(year)."
+  solution: |
+    storms |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(start = min(time), end = max(time), .by = c(name, year)) |>
+      filter(make_date(year, 9, 1) %within% interval(start, end)) |>
+      count(year)
+  compare: {ignore_row_order: true}
+
+- id: iv-age-predict
+  tier: stretch
+  type: predict
+  skill: di-length
+  prompt: "Someone born on 1 March 2000: how old are they on 28 February 2026?"
+  code: |
+    floor(time_length(interval(ymd("2000-03-01"), ymd("2026-02-28")), "year"))
+  options: ["25", "26", "24"]
+  verify: 'as.character(result)'
+  explain: >-
+    Their 26th birthday is 1 March 2026, a day away, so they are 25.
+    time_length() in "year" counts calendar years along the interval. The
+    shortcut of dividing the 9,495 days by 365 gives 26.01 and is wrong, because
+    it ignores the leap days.
+
+- id: iv-laura
+  tier: stretch
+  type: write
+  skill: di-within
+  data: storms
+  prompt: >-
+    Which other storms of 2020 were active at some point while Laura was?
+    Summarise each 2020 storm's start and end (first and last observation),
+    then keep the storms other than Laura whose interval overlaps Laura's.
+    Return name, start and end.
+  hint: "Save the summary, pull out Laura's row, then filter(name != \"Laura\", int_overlaps(interval(start, end), interval(laura$start, laura$end)))."
+  solution: |
+    s <- storms |>
+      filter(year == 2020) |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(start = min(time), end = max(time), .by = name)
+    laura <- filter(s, name == "Laura")
+    s |>
+      filter(name != "Laura", int_overlaps(interval(start, end), interval(laura$start, laura$end)))
+  compare: {ignore_row_order: true}
+
+- id: iv-overlap-counts
+  tier: brain-melter
+  type: write
+  skill: di-within
+  data: storms
+  prompt: >-
+    For each storm of 2020, how many other 2020 storms were active at some
+    point during its life (intervals from first to last observation, ends
+    included)? Return name and n, for the storms that overlapped at least
+    one other.
+  hint: "Join the 2020 summary to itself with join_by(overlaps(start, end, start, end)), drop the rows where a storm meets itself, then count."
+  solution: |
+    s <- storms |>
+      filter(year == 2020) |>
+      mutate(time = make_datetime(year, month, day, hour)) |>
+      summarise(start = min(time), end = max(time), .by = name)
+    s |>
+      inner_join(s, join_by(overlaps(start, end, start, end))) |>
+      filter(name.x != name.y) |>
+      count(name.x) |>
+      rename(name = name.x)
+  compare: {ignore_row_order: true}

@@ -1,0 +1,28 @@
+data: |
+  flights |>
+    filter(month == 12, day == 31, hour >= 19) |>
+    slice_head(n = 1, by = hour) |>
+    arrange(time_hour) |>
+    select(time_hour)
+steps:
+  - code: ""
+    caption: "Five flights on New Year's Eve 2013. time_hour is stored in America/New_York, and the table shows its New York clock reading."
+  - code: 'mutate(ny = format(time_hour, "%H:%M %Z"))'
+    show: 'format(time_hour, "%H:%M %Z")'
+    caption: "format() with %Z prints the zone's abbreviation: EST, New York's winter time, UTC minus 5 hours."
+    skill: dz-instant
+  - code: 'mutate(utc = format(with_tz(time_hour, "UTC"), "%H:%M %Z"))'
+    show: 'with_tz(time_hour, "UTC")'
+    caption: "with_tz() shows the same instants on the UTC clock: 5 hours later on the clock face, 00:00 to 04:00, so past midnight there. Nothing moved; only the clock changed."
+    skill: dz-with
+  - code: 'mutate(forced = format(force_tz(time_hour, "UTC"), "%H:%M %Z"))'
+    show: 'force_tz(time_hour, "UTC")'
+    caption: "force_tz() keeps the clock reading, 19:00, and swaps the zone. 19:00 UTC is a different instant: 14:00 in New York."
+    skill: dz-force
+  - code: 'mutate(gap = time_hour - force_tz(time_hour, "UTC"))'
+    show: 'time_hour - force_tz(time_hour, "UTC")'
+    caption: "The gap between the original and the forced instant: 5 hours, the offset between the two zones."
+  - code: 'mutate(utc_date = as_date(with_tz(time_hour, "UTC")))'
+    show: 'as_date(with_tz(time_hour, "UTC"))'
+    caption: "The date depends on the zone. These flights left on 31 December in New York, but their UTC date is 1 January 2014."
+    skill: dz-local-date

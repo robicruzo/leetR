@@ -1,0 +1,115 @@
+- id: co-yday-count
+  tier: warm-up
+  type: write
+  skill: dc-get
+  data: flights
+  prompt: "Count the flights on each day of the year (1 to 365), from time_hour, as columns yday and n."
+  hint: "yday() gives the day of the year; count() can create the column it counts."
+  solution: |
+    flights |>
+      count(yday = yday(time_hour))
+
+- id: co-month-label
+  tier: warm-up
+  type: predict
+  skill: dc-label
+  prompt: "What does this return?"
+  code: |
+    month(ymd("2026-11-27"), label = TRUE)
+  options: ["Nov", "11", "November"]
+  verify: 'as.character(result)'
+  explain: "label = TRUE gives the abbreviated month name, as an ordered factor with levels Jan to Dec. abbr = FALSE would give \"November\"."
+
+- id: co-daily-temp
+  tier: core
+  type: write
+  skill: dc-round
+  data: weather
+  prompt: >-
+    At JFK (origin == "JFK"), the mean temperature of each day: round each
+    time_hour down to its day and average temp, ignoring NAs. Return day and
+    temp.
+  hint: "mutate(day = floor_date(time_hour, \"day\")), then summarise(..., .by = day)."
+  solution: |
+    weather |>
+      filter(origin == "JFK") |>
+      mutate(day = floor_date(time_hour, "day")) |>
+      summarise(temp = mean(temp, na.rm = TRUE), .by = day)
+  compare: {ignore_row_order: true}
+
+- id: co-monday-weeks
+  tier: core
+  type: write
+  skill: dc-week
+  data: flights
+  prompt: "Count the flights in each week of 2013, with weeks starting on Monday, as columns week (the moment each week starts) and n."
+  hint: "floor_date() takes a week_start argument; 1 means Monday."
+  solution: |
+    flights |>
+      count(week = floor_date(time_hour, "week", week_start = 1))
+
+- id: co-fix-wday
+  tier: core
+  type: fix
+  skill: dc-label
+  data: flights
+  prompt: >-
+    This should count the flights on each day of the week, labelled Mon, Tue,
+    … and starting with Monday, but it shows the numbers 1 to 7 with Sunday
+    as 1. Fix it.
+  hint: "wday() has two arguments for this: one for the labels, one for the first day."
+  starter: |
+    flights |>
+      count(wday = wday(time_hour))
+  solution: |
+    flights |>
+      count(wday = wday(time_hour, label = TRUE, week_start = 1))
+
+- id: co-busiest-hour
+  tier: stretch
+  type: write
+  skill: dc-get
+  data: flights
+  prompt: >-
+    For each day of the week (labelled), the hour of time_hour with the most
+    flights, keeping ties. Return wday, hour and n.
+  hint: "count() by the labelled weekday and the hour, then slice_max(n, by = wday)."
+  solution: |
+    flights |>
+      count(wday = wday(time_hour, label = TRUE), hour = hour(time_hour)) |>
+      slice_max(n, by = wday)
+  compare: {ignore_row_order: true}
+
+- id: co-update-predict
+  tier: stretch
+  type: predict
+  skill: dc-set
+  prompt: "What does this return?"
+  code: |
+    update(ymd("2026-01-31"), month = 2)
+  options: ["2026-03-03", "NA", "2026-02-28"]
+  verify: 'as.character(result)'
+  explain: >-
+    update() sets the month to 2 and keeps day 31. 31 February doesn't
+    exist, so update() rolls the 3 extra days over into March: 3 March.
+    (Setting the part with month(x) <- 2 gives NA instead; %m+% would give
+    28 February.)
+
+- id: co-slots
+  tier: brain-melter
+  type: write
+  skill: dc-round
+  data: flights
+  prompt: >-
+    On 1 January 2013, which 15-minute slots of scheduled departure had the
+    most flights? Build the scheduled departure with make_datetime() from
+    year, month, day, hour and minute, round it down to its 15-minute slot,
+    and return the 3 busiest slots (slot and n), keeping ties.
+  hint: "floor_date(x, \"15 minutes\") snaps to quarter hours. Then count(slot) and slice_max(n, n = 3)."
+  solution: |
+    flights |>
+      filter(month == 1, day == 1) |>
+      mutate(slot = floor_date(make_datetime(year, month, day, hour, minute), "15 minutes")) |>
+      count(slot) |>
+      slice_max(n, n = 3)
+  compare: {ignore_row_order: true}

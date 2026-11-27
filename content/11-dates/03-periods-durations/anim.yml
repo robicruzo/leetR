@@ -1,0 +1,35 @@
+# The timeline ruler: ruler() (content/setup.R) puts named moments on one
+# time axis, so "one day later" can be seen as a distance.
+plots:
+  - code: |
+      t <- ymd_hms("2026-03-07 12:00:00", tz = "America/New_York")
+      jump <- ymd_hms("2026-03-08 03:00:00", tz = "America/New_York")
+      ruler(start = t, change = jump)
+    caption: "A ruler of real time. We start at noon on Saturday 7 March 2026 in New York. At the dashed line the clocks jumped from 2:00 straight to 3:00, so Sunday 8 March had only 23 hours."
+  - code: |
+      t <- ymd_hms("2026-03-07 12:00:00", tz = "America/New_York")
+      jump <- ymd_hms("2026-03-08 03:00:00", tz = "America/New_York")
+      ruler(start = t, "+ ddays(1)" = t + ddays(1), change = jump)
+    caption: "ddays(1) is a duration: exactly 86,400 seconds. 24 real hours after Saturday noon, the clocks read 13:00, because they skipped an hour on the way."
+    skill: dd-duration
+  - code: |
+      t <- ymd_hms("2026-03-07 12:00:00", tz = "America/New_York")
+      jump <- ymd_hms("2026-03-08 03:00:00", tz = "America/New_York")
+      ruler(start = t, "+ ddays(1)" = t + ddays(1), "+ days(1)" = t + days(1), change = jump)
+    caption: "days(1) is a period: \"the same clock time tomorrow\", 12:00, only 23 real hours later. The axis ticks are 6 real hours apart, which is why after the jump they read 07:00 and 13:00."
+    skill: dd-period
+  - code: |
+      t <- ymd_hms("2026-03-07 01:30:00", tz = "America/New_York")
+      jump <- ymd_hms("2026-03-08 03:00:00", tz = "America/New_York")
+      ruler(start = t, "+ ddays(1)" = t + ddays(1), "+ days(1)" = t + days(1), change = jump)
+    caption: "Start at 01:30 instead. 24 hours later is 01:30 on Sunday, still before the jump at 2:00, so the duration and the period land on the same moment. They differ only when the span crosses the change."
+    skill: dd-dst
+  - code: |
+      d <- ymd("2026-01-31")
+      ruler(start = d, "+ months(1)" = d + months(1), "%m+% months(1)" = d %m+% months(1))
+    caption: "Periods follow the calendar. A month after 31 January would be 31 February, which doesn't exist, so + months(1) is NA and has no place on the ruler. %m+% rolls back to the last real day, 28 February."
+    skill: dd-month-end
+  - code: |
+      d <- ymd("2026-01-31")
+      ruler(start = d, "%m+% months(1)" = d %m+% months(1), "+ dmonths(1)" = d + dmonths(1))
+    caption: "A duration of one month can only be an average: dmonths(1) is 30.4375 days, so it lands on 2 March at 10:30. Durations count seconds; they know nothing of calendars."

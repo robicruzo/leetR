@@ -1,0 +1,73 @@
+id: 01-parsing
+title: "Parsing: from text to dates"
+key_idea: >-
+  "9/1/2026" in a file is text, nine characters, not a date: it sorts letter
+  by letter and can't be added to. A parser turns it into a Date (a number of
+  days since 1970-01-01 that prints as a date), and you choose the parser by
+  the order of the parts: ymd(), mdy(), dmy(), with _hms() for times. Text
+  that names an impossible date becomes NA with a warning, so look for the
+  NAs. make_date() and make_datetime() build dates from separate number
+  columns, and parse_date_time() tries several orders when one column mixes
+  formats.
+subskills:
+  - {id: dp-text, name: "Text dates sort and compare as text"}
+  - {id: dp-order, name: "ymd(), mdy(), dmy(): name the order of the parts"}
+  - {id: dp-na, name: "Impossible dates become NA, with a warning"}
+  - {id: dp-make, name: "make_date() and make_datetime() from number columns"}
+  - {id: dp-mixed, name: "parse_date_time() for mixed formats"}
+readings:
+  - {label: "r4ds 17.2, Creating date/times", url: "https://r4ds.hadley.nz/datetimes.html#creating-datetimes"}
+  - {label: "lubridate: ymd() and friends", url: "https://lubridate.tidyverse.org/reference/ymd.html"}
+  - {label: "STAT 7500 primer ch. 10 (strings and dates)", url: ""}
+
+predict:
+  skill: dp-text
+  code: |
+    sort(c("9/1/2026", "10/1/2026", "11/1/2026"))
+  ask: "Which comes first?"
+  options:
+    - {choice: "10/1/2026", correct: true}
+    - choice: "9/1/2026"
+      misconception: text-sorts-as-dates
+      probe: "Nothing has told R these are dates. How does R compare two pieces of text: by meaning, or character by character?"
+    - choice: "11/1/2026"
+      misconception: sort-descending
+      probe: "Does sort() put the smallest value first or the largest? And which first character is smallest, \"1\" or \"9\"?"
+  verify: 'result[1]'
+
+probes:
+  - id: p-ymd-number
+    skill: dp-order
+    ask: "lakers$date holds integers such as 20081028. What does ymd(20081028) return?"
+    options:
+      - {choice: "2008-10-28", correct: true}
+      - choice: "NA, because ymd() needs text"
+        misconception: parser-needs-text
+        probe: "ymd() turns its input into text before parsing. What text does the number 20081028 become, and does it hold a year, a month and a day in that order?"
+      - choice: "A date 20,081,028 days after 1970"
+        misconception: number-is-days
+        probe: "Counting days is what as_date() does with a number. Does ymd() count, or read the digits?"
+    right_followup: "Are you sure? Then what does mdy(20081028) give?"
+    explain: >-
+      The ymd() family turns numbers into text first, then reads the digits in
+      the order the name gives: 2008, 10, 28. mdy(20081028) reads month 20,
+      which doesn't exist, so it gives NA with a warning.
+    verify: 'as.character(ymd(20081028)) == "2008-10-28" && is.na(suppressWarnings(mdy(20081028)))'
+  - id: p-impossible
+    skill: dp-na
+    ask: "What does ymd(c(\"2026-01-31\", \"2026-02-30\")) return?"
+    options:
+      - {choice: "2026-01-31 and NA, with a warning", correct: true}
+      - choice: "2026-01-31 and 2026-03-02"
+        misconception: invalid-dates-roll-over
+        probe: "Would a parser quietly move a day you typed into another month? How would you ever notice the typo then?"
+      - choice: "An error"
+        misconception: parse-failure-errors
+        probe: "One of the two is a fine date. Would R throw away the good one because of the bad one?"
+    right_followup: "Are you sure? In a table of 300,000 rows, how would you find the rows that failed?"
+    explain: >-
+      30 February doesn't exist, so that element becomes NA and R warns "1
+      failed to parse". The other element is parsed normally. In a big table,
+      filter(is.na(date), !is.na(text)) finds the failures: the text was
+      there but didn't parse.
+    verify: 'identical(is.na(suppressWarnings(ymd(c("2026-01-31", "2026-02-30")))), c(FALSE, TRUE))'

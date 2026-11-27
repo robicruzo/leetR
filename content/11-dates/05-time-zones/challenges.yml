@@ -1,0 +1,112 @@
+- id: tz-with-predict
+  tier: warm-up
+  type: predict
+  skill: dz-with
+  prompt: "What clock time does this show?"
+  code: |
+    with_tz(ymd_hms("2026-07-01 12:00:00", tz = "America/New_York"), "UTC")
+  options: ["2026-07-01 16:00", "2026-07-01 08:00", "2026-07-01 12:00"]
+  verify: 'format(result, "%Y-%m-%d %H:%M")'
+  explain: "In July New York is on EDT, 4 hours behind UTC. The same instant on the UTC clock is 16:00."
+
+- id: tz-utc-column
+  tier: warm-up
+  type: write
+  skill: dz-with
+  data: flights
+  prompt: "Add time_utc: time_hour shown in UTC (the same instants)."
+  hint: "with_tz() keeps the instant and changes the clock."
+  solution: |
+    flights |>
+      mutate(time_utc = with_tz(time_hour, "UTC"))
+
+- id: tz-nyd-utc
+  tier: core
+  type: write
+  skill: dz-local-date
+  data: flights
+  prompt: >-
+    The flights of 1 January 2013 (month 1, day 1, New York dates), counted
+    by their date in UTC: columns utc_date and n.
+  hint: "as_date() uses the zone the date-time is in, so move it to UTC first: as_date(with_tz(time_hour, \"UTC\"))."
+  solution: |
+    flights |>
+      filter(month == 1, day == 1) |>
+      count(utc_date = as_date(with_tz(time_hour, "UTC")))
+
+- id: tz-fix-force
+  tier: core
+  type: fix
+  skill: dz-force
+  data: flights
+  prompt: >-
+    make_datetime() built sched from New York clock readings but labelled
+    them UTC. This should attach the right zone and keep the clock readings,
+    but it shifts every clock by 4 or 5 hours. Fix it.
+  hint: "Which function keeps the clock reading and changes the zone?"
+  starter: |
+    flights |>
+      mutate(sched = with_tz(make_datetime(year, month, day, hour, minute), "America/New_York"))
+  solution: |
+    flights |>
+      mutate(sched = force_tz(make_datetime(year, month, day, hour, minute), "America/New_York"))
+
+- id: tz-second-half
+  tier: core
+  type: write
+  skill: dz-utc
+  data: flights
+  prompt: >-
+    Keep the flights from midnight 1 July 2013 New York time onwards, by
+    comparing time_hour with a date-time made by ymd_hms().
+  hint: "ymd_hms(\"2013-07-01 00:00:00\") on its own is midnight UTC, which is 8 pm on 30 June in New York. Tell the parser which zone the clock reading is in: tz = \"America/New_York\"."
+  require: [ymd_hms]
+  solution: |
+    flights |>
+      filter(time_hour >= ymd_hms("2013-07-01 00:00:00", tz = "America/New_York"))
+
+- id: tz-nye-predict
+  tier: stretch
+  type: predict
+  skill: dz-local-date
+  prompt: "What does this return?"
+  code: |
+    as_date(ymd_hms("2013-12-31 21:00:00", tz = "America/New_York"))
+  options: ["2013-12-31", "2014-01-01", "NA"]
+  verify: 'as.character(result)'
+  explain: "lubridate's as_date() takes the date on the clock of the zone the date-time is in: 31 December in New York. On the UTC clock the same instant is 02:00 on 1 January."
+
+- id: tz-offsets
+  tier: stretch
+  type: write
+  skill: dz-instant
+  data: flights
+  prompt: >-
+    New York is 5 hours behind UTC in winter and 4 in summer. Count the
+    flights per month and per offset in force at their time_hour:
+    columns month, offset (text such as "-0500") and n.
+  hint: "format(time_hour, \"%z\") prints the offset of the zone at that instant."
+  solution: |
+    flights |>
+      count(month, offset = format(time_hour, "%z"))
+
+- id: tz-dest-hour
+  tier: brain-melter
+  type: write
+  skill: dz-with
+  data: flights
+  uses: [airports]
+  prompt: >-
+    For the flights of 31 December 2013 whose destination is in airports,
+    local_hour: the clock hour at the destination at the moment of
+    time_hour. Join airports (faa) for the destination's tzone. with_tz()
+    takes one zone at a time, so work zone by zone. Return flight, dest,
+    tzone and local_hour.
+  hint: "inner_join(), then mutate(local_hour = hour(with_tz(time_hour, first(tzone))), .by = tzone). hour() returns plain numbers, which combine across zones."
+  solution: |
+    flights |>
+      filter(month == 12, day == 31) |>
+      inner_join(select(airports, faa, tzone), join_by(dest == faa)) |>
+      mutate(local_hour = hour(with_tz(time_hour, first(tzone))), .by = tzone) |>
+      select(flight, dest, tzone, local_hour)
+  compare: {ignore_row_order: true}

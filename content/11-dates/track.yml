@@ -1,0 +1,125 @@
+id: dates
+number: 11
+title: "Dates and times with lubridate"
+summary: >-
+  Time is messier than it looks. Parse text into dates and find the ones
+  that fail, take date-times apart and round them into bins, tell periods
+  from durations across clock changes and month ends, measure and compare
+  intervals, and keep instants straight across time zones.
+needs: [realdata]
+modules: [01-parsing, 02-components, 03-periods-durations, 04-intervals, 05-time-zones]
+
+# One question per module. A right answer sets that subskill to level 1; the
+# first module with a wrong answer is suggested as the starting point.
+diagnostic:
+  - id: d-dmy
+    skill: dp-order
+    module: 01-parsing
+    ask: "Which function parses \"28/02/2026\" correctly?"
+    options:
+      - {choice: "dmy()", correct: true}
+      - {choice: "mdy()", misconception: parser-ignores-order}
+      - {choice: "ymd()", misconception: ymd-reads-anything}
+    verify: 'as.character(dmy("28/02/2026")) == "2026-02-28" && is.na(suppressWarnings(mdy("28/02/2026")))'
+  - id: d-floor-hour
+    skill: dc-round
+    module: 02-components
+    ask: "What clock time does floor_date(ymd_hms(\"2026-03-08 14:40:00\"), \"hour\") show?"
+    options:
+      - {choice: "14:00", correct: true}
+      - {choice: "15:00", misconception: floor-is-round}
+      - {choice: "14:40", misconception: floor-keeps-minutes}
+    verify: 'format(floor_date(ymd_hms("2026-03-08 14:40:00"), "hour"), "%H:%M") == "14:00"'
+  - id: d-same-clock
+    skill: dd-period
+    module: 03-periods-durations
+    ask: "Which adds one day while keeping the clock time, even across a daylight-saving change?"
+    options:
+      - {choice: "days(1)", correct: true}
+      - {choice: "ddays(1)", misconception: duration-is-period}
+      - {choice: "dhours(24)", misconception: day-is-24-hours}
+  - id: d-within-end
+    skill: di-within
+    module: 04-intervals
+    ask: "Is the last moment of an interval %within% that interval?"
+    options:
+      - {choice: "Yes, both ends are included", correct: true}
+      - {choice: "No, the end is left out", misconception: interval-half-open}
+      - {choice: "Only for Dates, not date-times", misconception: within-depends-on-class}
+    verify: 'ymd_hms("2026-03-01 12:00:00") %within% interval(ymd_hms("2026-03-01 00:00:00"), ymd_hms("2026-03-01 12:00:00"))'
+  - id: d-with
+    skill: dz-with
+    module: 05-time-zones
+    ask: "Which function shows the same instant on another zone's clock?"
+    options:
+      - {choice: "with_tz()", correct: true}
+      - {choice: "force_tz()", misconception: force-is-with}
+      - {choice: "as_datetime()", misconception: as-datetime-converts}
+
+# The final assessment is meant for when every subskill reaches level 4.
+final:
+  questions:
+    - id: fin-feb29
+      skill: dp-na
+      ask: "What does ymd(\"2026-02-29\") return?"
+      options:
+        - {choice: "NA, with a warning", correct: true}
+        - {choice: "2026-03-01", misconception: invalid-dates-roll-over}
+        - {choice: "2026-02-28", misconception: invalid-dates-roll-back}
+      explain: "2026 isn't a leap year, so 29 February 2026 doesn't exist: the parser returns NA and warns. It never moves a date you typed."
+      verify: 'is.na(suppressWarnings(ymd("2026-02-29")))'
+    - id: fin-wday-monday
+      skill: dc-week
+      ask: "9 March 2026 is a Monday. What is wday(ymd(\"2026-03-09\"), week_start = 1)?"
+      options:
+        - {choice: "1", correct: true}
+        - {choice: "2", misconception: week-start-ignored}
+        - {choice: "0", misconception: wday-zero-based}
+      explain: "week_start = 1 makes Monday the first day of the week, so Monday is 1 and Sunday 7. With the default, Sunday is 1 and Monday 2."
+      verify: 'wday(ymd("2026-03-09"), week_start = 1) == 1'
+    - id: fin-dyears
+      skill: dd-duration
+      ask: "What does ymd(\"2025-01-01\") + dyears(1) return?"
+      options:
+        - {choice: "2026-01-01 06:00:00", correct: true}
+        - {choice: "2026-01-01", misconception: duration-is-period}
+        - {choice: "2025-12-31 18:00:00", misconception: dyears-is-365}
+      explain: "dyears(1) is 365.25 days of seconds, so from midnight on 1 January 2025 it lands six hours into 1 January 2026, and the Date becomes a date-time. years(1) would give 2026-01-01."
+      verify: 'format(ymd("2025-01-01") + dyears(1)) == "2026-01-01 06:00:00"'
+    - id: fin-mixed-units
+      skill: di-difftime
+      ask: "Inside summarise(..., .by = storm), as.numeric(max(time) - min(time)) gives 0.5 for one storm and 12 for another. What can you say?"
+      options:
+        - {choice: "Nothing yet: each group's difftime picked its own unit", correct: true}
+        - {choice: "The second storm lasted 24 times longer", misconception: difftime-one-unit}
+        - {choice: "Both numbers are in days", misconception: difftime-in-days}
+      explain: "Each group's subtraction makes its own difftime, with the unit R picks for that difference. as.numeric() strips the units, so 0.5 could be days and 12 hours: the same storm length. Name the unit: as.numeric(..., units = \"hours\")."
+    - id: fin-force
+      skill: dz-force
+      ask: "A logger wrote New York clock times, but R read them as UTC. Which repairs them?"
+      options:
+        - {choice: "force_tz(x, \"America/New_York\")", correct: true}
+        - {choice: "with_tz(x, \"America/New_York\")", misconception: with-repairs-zone}
+        - {choice: "Nothing; the zone only affects printing", misconception: zone-only-printing}
+      explain: "The clock readings are right and the zone is wrong, so the instants are wrong. force_tz() keeps the readings and fixes the zone, which moves each instant by 4 or 5 hours. with_tz() would keep the wrong instants."
+  integrative:
+    id: fin-evening-delays
+    data: flights
+    prompt: >-
+      After the clocks changed on 10 March 2013: for flights with time_hour
+      from midnight 10 March (New York time) to the end of March, and
+      scheduled to leave between 17:00 and 19:59 (hour 17 to 19), the mean
+      departure delay (dep_delay, ignoring NAs) for each day of the week,
+      labelled and starting on Monday. Return wday and delay.
+    hint: >-
+      Compare time_hour with ymd_hms("2013-03-10 00:00:00", tz =
+      "America/New_York") (without tz it would mean midnight UTC, 7 pm the
+      evening before in New York), keep month 3 and hours 17 to 19, then mutate(wday = wday(time_hour, label = TRUE,
+      week_start = 1)) and summarise(..., .by = wday).
+    solution: |
+      flights |>
+        filter(time_hour >= ymd_hms("2013-03-10 00:00:00", tz = "America/New_York"),
+               month == 3, hour >= 17, hour <= 19) |>
+        mutate(wday = wday(time_hour, label = TRUE, week_start = 1)) |>
+        summarise(delay = mean(dep_delay, na.rm = TRUE), .by = wday)
+    compare: {ignore_row_order: true}

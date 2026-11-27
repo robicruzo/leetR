@@ -160,6 +160,16 @@ export function snippetOptions(ch: TrackChallenge): SnippetOptions {
 	};
 }
 
+/**
+ * The datasets to show next to a challenge. A predict challenge without its
+ * own data defaults to penguins, so show only the ones its code names.
+ */
+export function shownData(ch: TrackChallenge): string[] {
+	const all = [ch.data, ...(ch.uses ?? [])];
+	if (ch.type !== 'predict') return all;
+	return all.filter((d) => new RegExp(`\\b${d}\\b`).test(ch.code ?? ''));
+}
+
 /** What the editor starts with. */
 export function starterCode(ch: TrackChallenge) {
 	return ch.type === 'fix' && ch.starter ? ch.starter : `${ch.data} |>\n  `;

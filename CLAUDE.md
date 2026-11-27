@@ -140,11 +140,13 @@ the engine moves tiles between states keyed by row id.
 | Layer stack | ggplot layers, aes vs constants, scales, facets |
 | Sampling machine | simulation, sampling distributions, bootstrap |
 
-Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
+Ninth: the **timeline ruler** for lubridate (Track 11). `ruler()` in
+`content/setup.R` puts named moments on one time axis (with a dashed line
+where the clocks change); the layer stack draws it step by step.
 
 ---
 
-## 4. Curriculum: 10 tracks, 52 modules
+## 4. Curriculum: 11 tracks, 57 modules
 
 | # | Track | Modules | Needs | Readings |
 |---|---|---|---|---|
@@ -158,21 +160,13 @@ Planned ninth: a **timeline ruler** for lubridate (periods vs durations).
 | 8 | R internals | names/values, copy-on-modify · environments, scoping · closures, function factories · lazy evaluation · S3 | 7 | Adv R 2, 6–7, 10, 13 |
 | 9 | Statistics with R | d/p/q/r · simulation · bootstrap · lm() | 6, 7 | MDSR 9, 13, App. E, primer 11 |
 | 10 | Capstones | Berkeley admissions + Simpson's paradox · NYC flights investigation | 1–6 | primer 6–8, r4ds 19 |
+| 11 | Dates and times with lubridate (**built**) | parsing · components and rounding · periods vs durations · intervals · time zones | 5 | r4ds 17 |
 
 Books: r4ds 2e https://r4ds.hadley.nz/, MDSR 3e
 https://mdsr-book.github.io/mdsr3e/, Advanced R 2e https://adv-r.hadley.nz/.
 
 **Planned additions (agreed in principle, not written):**
-- **lubridate** becomes its own short track (4–5 modules): parsing
-  (`mdy("01/02/2026")` vs `dmy(...)`; text dates sort alphabetically) ·
-  components and rounding (`floor_date()` week start) · periods vs durations
-  (NYC DST starts 2026-03-08 at 2 am: `+ days(1)` vs `+ ddays(1)` differ
-  from a start **after** 2 am the day before, e.g. 12:00 → 12:00 vs 13:00 EDT.
-  Corrected 2026-11-27: from 01:30 both give 01:30 EST, because 24 hours
-  later is still before the change. `ymd("2026-01-31") + months(1)` is `NA`,
-  `%m+%` rolls back) · time
-  zones (`with_tz()` vs `force_tz()`). Needs the timeline-ruler visual.
-  Data: `storms` + `make_datetime()`; verify each example in webR.
+- ~~**lubridate** as its own short track~~: built as Track 11 (§7).
 - **janitor** inside Track 5: `clean_names()` (header morph), `tabyl()` +
   `adorn_*()` (order matters: `adorn_pct_formatting()` makes text, so it goes
   after `adorn_percentages()`), `get_dupes()`, `remove_empty()`,
@@ -181,8 +175,8 @@ https://mdsr-book.github.io/mdsr3e/, Advanced R 2e https://adv-r.hadley.nz/.
 - **broom** in Track 9. skimr only as a challenge, not a module.
 - Rule: a package earns modules when it brings a new, misconception-rich idea;
   convenience functions appear inside challenges.
-- Estimated cost: ~200 YAML lines per module; lubridate + janitor add ~1,400
-  lines and take the curriculum from 52 to ~59 modules.
+- Estimated cost: ~200 YAML lines per module; janitor adds ~400 lines and
+  takes the curriculum from 57 to ~59 modules.
 
 ---
 
@@ -263,6 +257,7 @@ Totals:
 | 1, `content/01-foundations` | 6 | 24 | 48 | 12 | 25 | 1,162 |
 | 5, `content/05-real-data` | 6 | 24 | 48 | 12 | 27 | 1,272 |
 | 6, `content/06-visualization` | 6 | 23 | 48 | 12 | 32 plot steps | 1,339 |
+| 11, `content/11-dates` | 5 | 23 | 40 | 10 | 24 + 6 ruler steps | 1,204 |
 
 ### Content format
 
@@ -334,6 +329,14 @@ Plotting modules (Track 6) use `plots:` instead of `steps:` in anim.yml:
 each is complete ggplot code plus a caption and skill. The build checks
 each builds; the app's `PlotStack` draws them one by one with R in the
 browser (the "layer stack": axes, then points, then colour, …).
+Track 11's periods-and-durations module uses the same `plots:` with
+`ruler()` from setup.R (the timeline ruler).
+Cells print like tibble: date-times as their clock reading without the
+zone (`2013-12-31 19:00`; format with `%Z` in a step to show it),
+intervals as `Aug 23 18:00 – Aug 31 06:00`, difftimes, durations and periods
+in their own format (`7.5 days`). `TableMorph` widens a column whose cells
+are longer than the base width and takes the room from columns with slack,
+so tables whose text fits look as before.
 Filtering joins keep `.id` and need nothing special.
 Row identity is the hidden `.id` column (tile key `<row key>|<column id>`).
 After `split`, row keys become `<id>:<name>`. Rows a step adds with no source
@@ -370,6 +373,12 @@ Track 4 uses nycflights13 (`flights`, `airlines`, `airports`, `planes`,
 and from setup.R: `instruments` (band_instruments plus John on piano, so name
 repeats), `mass_bands` (made-up penguin mass ranges) and `fees` (made-up fee
 by flight distance). Grading a join over all of flights takes about 1 s in webR.
+Track 11 uses lubridate's `lakers` (`date` is an integer such as 20081028),
+`flights`, `weather`, `airports`, `storms`, and from setup.R: `signups` (16
+hand-typed month/day/year dates, 5 of which don't parse) and `mixed_dates`
+(dates written three ways, for `parse_date_time()`). Predict challenges
+without their own `data` default to penguins; the app shows only the
+datasets a predict challenge's code names (`shownData()` in tracks.ts).
 
 **Animation sample:** `penguins_sample <- penguins[c(1, 277, 153, 21, 4, 278, 31, 154), ]`
 with `.id` = those row numbers (tile keys). Row 4 has NA mass and NA sex on
@@ -454,6 +463,26 @@ It runs under webR (`.build_args` set by check.mjs) or native R
   - Hint → level 3; clean solve + clean review solve a day later → level 4.
   - Progress survives a reload.
   - The production build (88 MB, 66 prerendered pages) grades a challenge on a never-visited page with the server stopped.
+- **Dates, checked 2026-11-27 (R 4.5.3 natively and webR, lubridate 1.9.5):**
+  - Comparing a date-time with a Date converts the Date to midnight in the
+    date-time's own zone: `flights$time_hour >= ymd("2013-07-01")` keeps
+    170,618 flights under any computer time zone (UTC, New York, Tokyo). The
+    real trap is `ymd_hms("2013-07-01 00:00:00")` without `tz`: midnight
+    UTC, 8 pm on 30 June in New York, 104 more flights.
+  - In the browser, R's `TZ` is the computer's zone (America/New_York on the
+    Mac); in the content check it is UTC. lubridate's parsers and
+    `make_datetime()` default to UTC either way, so no content depends on it.
+  - `month(x) <- 2` on 31 January gives NA; `update(x, month = 2)` rolls
+    over to 3 March; `%m+% months(1)` gives 28 February.
+  - Per-group difftimes: inside `summarise(.by = …)`, `as.numeric(max(t) -
+    min(t))` uses each group's own unit (days for most storms, hours for
+    short ones); `span = max(t) - min(t)` with mixed units is combined into
+    seconds.
+  - `ceiling_date()` moves a Date on the boundary up (1 March → 1 April) but
+    leaves a date-time at exactly 00:00:00 where it is.
+  - JFK's `weather` has many days with missing hours, so it can't show the
+    23- and 25-hour clock-change days cleanly; flights can
+    (`time_hour + days(1) != time_hour + ddays(1)` on 9 March and 2 November).
 
 ---
 
@@ -475,11 +504,11 @@ It runs under webR (`.build_args` set by check.mjs) or native R
 5. ~~**Tracks 1 and 5**~~ **Done 2026-11-27**: R foundations (6 modules) and
    real-world data (6 modules: import/cleaning, counts and proportions,
    strings, regex, factors, one lubridate module). The full lubridate track
-   (time zones, the timeline-ruler visual) is still to do.
+   became Track 11 (item 7).
    Next: **Track 6, Visualization** (plot grading via `ggplot_build()`
    layers, the layer-stack visual).
 5. Consider adding `filter_out()` / `when_any()` to the filter module.
-6. Write the **lubridate** track and the **janitor** modules (section 4).
+6. Write the **janitor** modules (section 4).
 7. Then the remaining tracks, one at a time, ~200 YAML lines per module. Each
    new track is a `content/<NN-name>/` folder; the routes and the content
    check pick it up automatically.
@@ -489,8 +518,13 @@ It runs under webR (`.build_args` set by check.mjs) or native R
    attached, plot challenges grade (alternative code passes, typical
    mistakes get specific messages), and the production build prerenders all
    347 pages.
-   Next: the full lubridate track (time zones, the timeline-ruler visual),
-   or Tracks 7–10 (programming, R internals, statistics, capstones).
+7. ~~**Track 11, dates and times with lubridate.**~~ **Done 2026-11-27**:
+   5 modules (parsing, components and rounding, periods vs durations,
+   intervals, time zones), 40 challenges, the timeline ruler. Checked in the
+   browser (dev and the Pages-like production build): the rulers draw, the
+   time-zone and interval tables fit, and date challenges grade.
+   Next: Tracks 7–10 (programming, R internals, statistics, capstones), or
+   the janitor modules.
 8. ~~**Deploy to GitHub Pages.**~~ **Done 2026-11-24**: every push to main
    builds and deploys (`.github/workflows/deploy.yml`) to
    https://robicruzo.github.io/leetR/. Tested locally first with
@@ -499,7 +533,6 @@ It runs under webR (`.build_args` set by check.mjs) or native R
    grading and offline both work under /leetR/.
 9. Smaller follow-ups:
    - a review queue across all tracks;
-   - the timeline-ruler visual for lubridate;
    - lazy-loading ggplot2 at runtime (it is mounted at boot, though only `mpg` uses it so far).
 
 ---
@@ -547,12 +580,23 @@ It runs under webR (`.build_args` set by check.mjs) or native R
   message with `conditionMessage()` in R (a condition holds an R call, which
   webR cannot convert to JS). An earlier attempt, `captureConditions: false`,
   made webR throw message-less errors.
-- **webR in the browser loads R's time-zone files lazily, and the first one or
-  two date operations of a session fail below R** (even `as.Date("2026-01-02")`;
-  not even `tryCatch()` sees it). Under Node it never happens, so the content
-  check can't catch it. The engine warms up dates, date-times and a time zone
-  at boot, retrying (`#warmUpTimeZones`). If date grading ever breaks again,
-  test the **first** date operation of a fresh session.
+- **Dates failing in the browser with an empty error** (even
+  `as.Date("2026-01-02")`; not even `tryCatch()` sees it, and after a few
+  failures R answers everything with "evaluation nested too deeply"). An
+  earlier note blamed lazy loading of the time-zone files and added a boot
+  warm-up (`#warmUpTimeZones`, kept). On 2026-11-27 the cause on the dev
+  server turned out to be Vite's static server: it sends `.gz` files with
+  `Content-Encoding: gzip`, so the browser unzipped webR's filesystem images
+  (`static/webr/vfs/**/*.data.gz`; R's `share/` holds `zoneinfo/`) and webR
+  unzipped them a second time. `vite.config.ts` now strips that header for
+  `.gz` in dev and preview. GitHub Pages and `npm run serve:pages` send plain
+  bytes, so production was never affected. After changing how a file is
+  served, `touch` it: with an unchanged ETag the browser keeps its cached
+  copy. The content check runs under Node, so it can't catch any of this:
+  test dates in the browser.
+- In `count()`, `name =` is an argument (the name of the count column), so
+  `count(name = name.x)` looks for an object `name.x`. Count, then
+  `rename()`.
 - **Updates and the service worker:** right after a deploy, the old worker
   still controls an open or installed app. A page that is new in the update
   comes from the network (new code), while the R package index came from the

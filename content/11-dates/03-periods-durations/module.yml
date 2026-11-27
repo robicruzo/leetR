@@ -1,0 +1,74 @@
+id: 03-periods-durations
+title: "Periods vs durations"
+key_idea: >-
+  "One day later" means two different things. A duration (ddays(1),
+  dhours(3)) is an exact number of seconds: 86,400 for a day, and dyears(1)
+  is 365.25 days. A period (days(1), months(1)) is a step on the clock and
+  calendar: the same clock time tomorrow, the same day next month. They
+  agree most of the time and disagree exactly where the calendar is
+  irregular: across a daylight-saving change (a day of 23 or 25 hours) and
+  at month ends (31 January + months(1) is NA; %m+% rolls back to 28
+  February).
+subskills:
+  - {id: dd-duration, name: "Durations are exact seconds (ddays, dyears = 365.25 days)"}
+  - {id: dd-period, name: "Periods follow the clock and the calendar"}
+  - {id: dd-dst, name: "Across a clock change, days(1) and ddays(1) differ"}
+  - {id: dd-month-end, name: "+ months(1) can be NA; %m+% rolls back"}
+readings:
+  - {label: "r4ds 17.4, Time spans", url: "https://r4ds.hadley.nz/datetimes.html#time-spans"}
+  - {label: "lubridate: periods", url: "https://lubridate.tidyverse.org/reference/period.html"}
+  - {label: "lubridate: %m+%", url: "https://lubridate.tidyverse.org/reference/mplus.html"}
+
+predict:
+  skill: dd-dst
+  code: |
+    ymd_hms("2026-10-31 12:00:00", tz = "America/New_York") + ddays(1)
+  ask: "New York's clocks go back from 2 am to 1 am on 1 November 2026. What clock time does this return?"
+  options:
+    - {choice: "2026-11-01 11:00", correct: true}
+    - choice: "2026-11-01 12:00"
+      misconception: duration-is-period
+      probe: "ddays(1) is exactly 86,400 seconds, whatever the clocks do. On a day with 25 hours, where are the clocks after 24 hours?"
+    - choice: "2026-11-01 13:00"
+      misconception: dst-always-adds-hour
+      probe: "In November the clocks go back, repeating an hour. After 24 real hours, have the clocks shown more or fewer than 24 hours?"
+  verify: 'format(result, "%Y-%m-%d %H:%M")'
+
+probes:
+  - id: p-dyears
+    skill: dd-duration
+    ask: "How many days is dyears(1)?"
+    options:
+      - {choice: "365.25", correct: true}
+      - choice: "365"
+        misconception: year-is-365
+        probe: "A duration isn't tied to any particular year, so it can't know whether there is a 29 February. What single number of days would fit every year on average?"
+      - choice: "It depends on the year"
+        misconception: duration-knows-calendar
+        probe: "A duration is a number of seconds with no start date. Can it look at a calendar?"
+    right_followup: "Are you sure? Then what is ymd(\"2025-01-01\") + dyears(1)?"
+    explain: >-
+      A duration is a fixed number of seconds, so dyears(1) is the average
+      year: 365.25 days. That is why ymd("2025-01-01") + dyears(1) is
+      2026-01-01 06:00:00, six hours past New Year. years(1), a period,
+      gives 2026-01-01.
+    verify: 'as.numeric(dyears(1)) / 86400 == 365.25 && format(ymd("2025-01-01") + dyears(1)) == "2026-01-01 06:00:00"'
+  - id: p-mplus-seq
+    skill: dd-month-end
+    ask: "What does ymd(\"2026-01-31\") %m+% months(1:3) return?"
+    options:
+      - {choice: "2026-02-28, 2026-03-31, 2026-04-30", correct: true}
+      - choice: "2026-02-28, 2026-03-28, 2026-04-28"
+        misconception: mplus-chains
+        probe: "Is each number of months added to 31 January, or to the result before it?"
+      - choice: "NA, 2026-03-31, NA"
+        misconception: mplus-is-plus
+        probe: "That is what plain + months(1:3) gives. What does %m+% do instead of returning NA?"
+    right_followup: "Are you sure? What does ymd(\"2026-03-31\") %m-% months(1) give?"
+    explain: >-
+      Each period is added to 31 January separately: 1, 2 and 3 months
+      later. Where the day doesn't exist (31 February, 31 April), %m+% rolls
+      back to the last day of that month; where it exists (31 March), it
+      stays. %m-% does the same going back: 31 March minus a month is 28
+      February.
+    verify: 'identical(as.character(ymd("2026-01-31") %m+% months(1:3)), c("2026-02-28", "2026-03-31", "2026-04-30")) && as.character(ymd("2026-03-31") %m-% months(1)) == "2026-02-28"'

@@ -21,6 +21,18 @@ fmt <- function(v) {
   # A list-column cell prints like tibble does: <int [2]>
   if (is.list(v)) return(vapply(v, function(x) sprintf("<%s [%d]>", vctrs::vec_ptype_abbr(x), length(x)), ""))
   if (is.logical(v)) return(ifelse(is.na(v), "NA", ifelse(v, "TRUE", "FALSE")))
+  # Date-times show their clock reading like tibble (no zone; seconds only
+  # when needed); intervals their two ends; difftimes, durations and periods
+  # their own format ("7.5 days", "86400s (~1 days)", "1d 0H 0M 0S").
+  na_as_text <- function(x, v) { x[is.na(v)] <- "NA"; x }
+  if (inherits(v, "POSIXct")) {
+    secs <- any(as.numeric(v) %% 60 != 0, na.rm = TRUE)
+    return(na_as_text(format(v, if (secs) "%Y-%m-%d %H:%M:%S" else "%Y-%m-%d %H:%M"), v))
+  }
+  if (lubridate::is.interval(v)) {
+    return(na_as_text(paste(format(lubridate::int_start(v), "%b %d %H:%M"), "–", format(lubridate::int_end(v), "%b %d %H:%M")), v))
+  }
+  if (inherits(v, c("difftime", "Duration", "Period"))) return(na_as_text(format(v), v))
   if (is.numeric(v)) return(vapply(v, function(x) if (is.na(x)) "NA" else format(x, digits = 4, trim = TRUE), ""))
   v <- as.character(v); ifelse(is.na(v), "NA", v)
 }

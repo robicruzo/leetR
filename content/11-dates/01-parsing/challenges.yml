@@ -1,0 +1,109 @@
+- id: pa-lakers-date
+  tier: warm-up
+  type: write
+  skill: dp-order
+  data: lakers
+  prompt: "lakers$date holds integers such as 20081028 (year, month, day). Add game_date: date as a Date."
+  hint: "The digits are in year, month, day order. Which parser is named that way?"
+  solution: |
+    lakers |>
+      mutate(game_date = ymd(date))
+
+- id: pa-dmy-predict
+  tier: warm-up
+  type: predict
+  skill: dp-order
+  prompt: "What date does this return?"
+  code: |
+    dmy("03-04-2026")
+  options: ["2026-04-03", "2026-03-04", "NA"]
+  verify: 'as.character(result)'
+  explain: "dmy() reads day, month, year: the 3rd of April. The separator (- or /) doesn't matter; the order in the function's name does."
+
+- id: pa-sched-dep
+  tier: core
+  type: write
+  skill: dp-make
+  data: flights
+  prompt: >-
+    sched_dep_time holds the scheduled departure as an integer such as 515
+    for 5:15. Add sched_dep: the scheduled departure as a date-time, built
+    from year, month, day and sched_dep_time.
+  hint: "make_datetime(year, month, day, hour, min). The hour is sched_dep_time %/% 100 (integer division), the minutes sched_dep_time %% 100 (the remainder)."
+  solution: |
+    flights |>
+      mutate(sched_dep = make_datetime(year, month, day, sched_dep_time %/% 100, sched_dep_time %% 100))
+
+- id: pa-fix-lakers
+  tier: core
+  type: fix
+  skill: dp-order
+  data: lakers
+  prompt: "This should count the plays recorded on each lakers game date, with the date as a Date, but every date comes out NA. Fix it."
+  hint: "Read one value of date, such as 20081028. Which part comes first?"
+  starter: |
+    lakers |>
+      count(game_date = mdy(date))
+  solution: |
+    lakers |>
+      count(game_date = ymd(date))
+
+- id: pa-failures
+  tier: core
+  type: write
+  skill: dp-na
+  data: signups
+  prompt: >-
+    signups$signed_up was typed by hand, month/day/year. Keep the rows whose
+    signed_up does not parse as a month/day/year date.
+  hint: "Parse with mdy() inside filter() and keep the rows where the result is NA."
+  solution: |
+    signups |>
+      filter(is.na(mdy(signed_up)))
+
+- id: pa-mixed
+  tier: stretch
+  type: write
+  skill: dp-mixed
+  data: mixed_dates
+  prompt: >-
+    mixed_dates$when is written three ways: 2026-01-02 (year first),
+    03/14/2026 (month first) and 5 June 2026 (day first). Add date: when as a
+    Date.
+  hint: "parse_date_time(when, orders = c(\"ymd\", \"mdy\", \"dmy\")) tries each order; it returns a date-time, so wrap it in as_date()."
+  solution: |
+    mixed_dates |>
+      mutate(date = as_date(parse_date_time(when, orders = c("ymd", "mdy", "dmy"))))
+
+- id: pa-text-max
+  tier: stretch
+  type: predict
+  skill: dp-text
+  prompt: "What does this return?"
+  code: |
+    max(c("9/30/2026", "10/1/2026", "12/25/2025"))
+  options: ["9/30/2026", "10/1/2026", "12/25/2025"]
+  verify: 'result'
+  explain: "These are text, so max() compares them character by character: \"9\" is larger than \"1\", so \"9/30/2026\" wins, though 1 October is later. Parse first: max(mdy(...)) gives 2026-10-01."
+
+- id: pa-overnight
+  tier: brain-melter
+  type: write
+  skill: dp-make
+  data: flights
+  prompt: >-
+    dep_time is the actual departure, an integer like 517 for 5:17. Build
+    dep (from year, month, day and dep_time) and sched (from year, month, day
+    and sched_dep_time) with make_datetime(). Flights that left after
+    midnight, a day late, get a dep a day too early: dep is before sched
+    though dep_delay is positive. For those, add a day to dep. Return
+    flights with the two new columns.
+  hint: "if_else(dep < sched & dep_delay > 0, dep + days(1), dep). Build sched first, then dep, then correct dep."
+  solution: |
+    flights |>
+      mutate(
+        dep = make_datetime(year, month, day, dep_time %/% 100, dep_time %% 100),
+        sched = make_datetime(year, month, day, sched_dep_time %/% 100, sched_dep_time %% 100),
+        dep = if_else(dep < sched & dep_delay > 0, dep + days(1), dep)
+      )
+  compare: {ignore_column_order: true}

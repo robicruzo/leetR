@@ -150,7 +150,32 @@
 		});
 	});
 
-	const colW = $derived(Math.min(170, (width - 2 * PAD) / ncols));
+	// Each column is as wide as the base width, or wider if this step's longest
+	// cell needs it (date-times, intervals). If the step then overflows, columns
+	// with room to spare give it up first, and only then does every column
+	// shrink in proportion. Tables whose text fits look exactly as before.
+	const CH = 7.5; // px per character of the tiles' monospace font
+	const cols = $derived.by(() => {
+		const avail = width - 2 * PAD;
+		const base = Math.min(170, avail / ncols);
+		const fit: number[] = [];
+		for (const t of frames[step]) fit[t.c] = Math.max(fit[t.c] ?? 70, Math.ceil(t.txt.length * CH + 24));
+		const n = Math.max(ncols, fit.length);
+		let w = Array.from({ length: n }, (_, c) => (fit[c] === undefined ? base : Math.max(base, fit[c])));
+		const here = (c: number) => fit[c] !== undefined;
+		const sum = () => w.reduce((a, v, c) => a + (here(c) ? v : 0), 0);
+		const excess = sum() - avail;
+		if (excess > 0) {
+			const slack = w.map((v, c) => (here(c) ? Math.max(0, v - fit[c]) : 0));
+			const total = slack.reduce((a, v) => a + v, 0);
+			if (total > 0) w = w.map((v, c) => v - slack[c] * Math.min(1, excess / total));
+			const used = sum();
+			if (used > avail) w = w.map((v) => (v * avail) / used);
+		}
+		const x: number[] = [];
+		w.reduce((acc, v) => (x.push(acc), acc + v), 0);
+		return { x, w };
+	});
 	const current = $derived(steps[step]);
 
 	function show(i: number) {
@@ -196,8 +221,8 @@
 			<div
 				class="tile {t.cls}"
 				title={t.txt}
-				style:width="{colW - 6}px"
-				style:transform="translate({PAD + t.c * colW}px, {PAD + t.r * ROW_H}px)"
+				style:width="{(cols.w[t.c] ?? 120) - 6}px"
+				style:transform="translate({PAD + (cols.x[t.c] ?? 0)}px, {PAD + t.r * ROW_H}px)"
 				style:opacity={t.op}
 			>
 				{t.txt}
